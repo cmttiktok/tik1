@@ -11,22 +11,47 @@ const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: "*" } });
 
 app.use(express.json());
-app.use(express.static(__dirname)); // Cho phép truy cập file ngang hàng
 
 // KẾT NỐI DATABASE
 const MONGODB_URI = "mongodb+srv://baoboi97:baoboi97@cluster0.skkajlz.mongodb.net/tiktok_tts?retryWrites=true&w=majority&appName=Cluster0";
 mongoose.connect(MONGODB_URI);
 
-const Announcement = mongoose.model('Announcement', { text: String, color: String, isRainbow: Boolean });
+const BannedWord = mongoose.model('BannedWord', { word: String });
+const Acronym = mongoose.model('Acronym', { key: String, value: String });
+const EmojiMap = mongoose.model('EmojiMap', { icon: String, text: String });
+const BotAnswer = mongoose.model('BotAnswer', { keyword: String, response: String });
 
+// ĐƯỜNG DẪN FILE (Đã sửa để nhận file ngang hàng)
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, 'admin.html')));
 
-app.get('/api/announcement', async (req, res) => {
-    let a = await Announcement.findOne();
-    if (!a) a = await Announcement.create({ text: "Chào mừng bạn!", color: "#fe2c55", isRainbow: false });
-    res.json(a);
-});
+// --- API KẾT NỐI (Giữ nguyên để Admin hoạt động) ---
+app.get('/api/words', async (req, res) => res.json((await BannedWord.find()).map(w => w.word)));
+app.post('/api/words', async (req, res) => { if (req.body.word) await new BannedWord({ word: req.body.word }).save(); res.sendStatus(200); });
+app.delete('/api/words/:word', async (req, res) => { await BannedWord.deleteOne({ word: req.params.word }); res.sendStatus(200); });
+app.get('/api/acronyms', async (req, res) => res.json(await Acronym.find()));
+app.post('/api/acronyms', async (req, res) => { await new Acronym(req.body).save(); res.sendStatus(200); });
+app.delete('/api/acronyms/:key', async (req, res) => { await Acronym.deleteOne({ key: req.params.key }); res.sendStatus(200); });
+app.get('/api/emojis', async (req, res) => res.json(await EmojiMap.find()));
+app.post('/api/emojis', async (req, res) => { await new EmojiMap(req.body).save(); res.sendStatus(200); });
+app.delete('/api/emojis/:id', async (req, res) => { await EmojiMap.findByIdAndDelete(req.params.id); res.sendStatus(200); });
+app.get('/api/bot', async (req, res) => res.json(await BotAnswer.find()));
+app.post('/api/bot', async (req, res) => { await new BotAnswer(req.body).save(); res.sendStatus(200); });
+app.delete('/api/bot/:id', async (req, res) => { await BotAnswer.findByIdAndDelete(req.params.id); res.sendStatus(200); });
+
+// LOGIC XỬ LÝ CHAT & TTS
+async function processText(text) {
+    if (!text) return null;
+    let processed = text;
+    const emojis = await EmojiMap.find();
+    emojis.forEach(e => { processed = processed.split(e.icon).join(" " + e.text + " "); });
+    const acronyms = await Acronym.find();
+    acronyms.forEach(a => {
+        const regex = new RegExp(`(?<!\\p{L})${a.key}(?!\\p{L})`, 'giu');
+        processed = processed.replace(regex, a.value);
+    });
+    return processed;
+}
 
 async function getGoogleAudio(text) {
     try {
@@ -41,25 +66,29 @@ io.on('connection', (socket) => {
     socket.on('set-username', (username) => {
         if (tiktok) tiktok.disconnect();
         tiktok = new WebcastPushConnection(username);
-        
-        tiktok.connect().then(state => {
-            socket.emit('status', `Đã kết nối: ${username}`);
-        }).catch(err => socket.emit('status', "Lỗi: " + err.message));
-
-        // Lấy Avatar và Nickname chính xác
-        tiktok.on('roomUser', (data) => {
-            socket.emit('room-info', {
-                avatar: data.owner.avatarThumb.url_list[0],
-                nickname: data.owner.nickname
-            });
-        });
+        tiktok.connect().then(() => socket.emit('status', `Đã kết nối: ${username}`)).catch(() => socket.emit('status', "Lỗi kết nối TikTok"));
 
         tiktok.on('chat', async (data) => {
-            const audio = await getGoogleAudio(`${data.nickname} nói ${data.comment}`);
-            socket.emit('audio-data', { type: 'chat', user: data.nickname, comment: data.comment, audio });
+            const botRules = await BotAnswer.find();
+            const match = botRules.find(r => data.comment.toLowerCase().includes(r.keyword.toLowerCase()));
+            if (match) {
+                const audio = await getGoogleAudio(match.response);
+                socket.emit('audio-data', { type: 'bot', user: "TRỢ LÝ", comment: match.response, audio });
+            }
+            const final = await processText(data.comment);
+            if (final) {
+                const audio = await getGoogleAudio(`${data.nickname} nói: ${final}`);
+                socket.emit('audio-data', { type: 'chat', user: data.nickname, comment: data.comment, audio });
+            }
+        });
+        tiktok.on('gift', async (data) => {
+            if (data.repeatEnd) {
+                const audio = await getGoogleAudio(`Cảm ơn ${data.nickname} đã tặng ${data.giftName}`);
+                socket.emit('audio-data', { type: 'gift', user: "QUÀ", comment: `${data.nickname} tặng ${data.giftName}`, audio });
+            }
         });
     });
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log('Server chạy tại port ' + PORT));
+server.listen(PORT, () => console.log('🚀 Server running on port ' + PORT));
