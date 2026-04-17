@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <title>BÈO ADMIN - DATABASE</title>
+    <title>BÈO ADMIN - QUẢN LÝ DỮ LIỆU</title>
     <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@600&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Quicksand', sans-serif; background: #fff0f3; padding: 20px; }
@@ -18,22 +18,16 @@
 </head>
 <body onload="load()">
     <div class="container">
-        <h3 style="text-align: center; color: #fe2c55;">CÀI ĐẶT HỆ THỐNG</h3>
+        <h3 style="text-align: center; color: #fe2c55;">QUẢN LÝ DỮ LIỆU</h3>
         <div class="tabs">
             <div class="tab active" onclick="show('ban')">TỪ CẤM</div>
             <div class="tab" onclick="show('acr')">VIẾT TẮT</div>
             <div class="tab" onclick="show('emo')">EMOJI</div>
             <div class="tab" onclick="show('bot')">TRỢ LÝ</div>
-            <div class="tab" onclick="show('ann')">THÔNG BÁO</div>
-        </div>
-
-        <div id="ann" class="section" style="display:none">
-            <input type="text" id="ann-input" placeholder="Nhập nội dung chạy chữ dưới đồng hồ...">
-            <button onclick="saveAnn()" style="background: #2ecc71;">LƯU THÔNG BÁO</button>
         </div>
 
         <div id="ban" class="section">
-            <input type="text" id="i-ban" placeholder="Thêm từ cấm đọc...">
+            <input type="text" id="i-ban" placeholder="Từ cấm...">
             <button onclick="add('words', {word: document.getElementById('i-ban').value})">THÊM</button>
             <div id="l-ban"></div>
         </div>
@@ -47,7 +41,7 @@
 
         <div id="emo" class="section" style="display:none">
             <input type="text" id="i-emo-i" placeholder="Emoji (vd: ❤️)">
-            <input type="text" id="i-emo-t" placeholder="Đọc thành (vd: thả tim)">
+            <input type="text" id="i-emo-t" placeholder="Đọc thành (vd: tim)">
             <button onclick="add('emojis', {icon: document.getElementById('i-emo-i').value, text: document.getElementById('i-emo-t').value})">THÊM</button>
             <div id="l-emo"></div>
         </div>
@@ -64,23 +58,19 @@
         function show(t) {
             document.querySelectorAll('.section').forEach(s => s.style.display = 'none');
             document.getElementById(t).style.display = 'block';
-            document.querySelectorAll('.tab').forEach(el => el.classList.toggle('active', el.innerText.toLowerCase().includes(t=='ann'?'thông báo':t)));
-        }
-
-        async function saveAnn() {
-            const content = document.getElementById('ann-input').value;
-            await fetch('/api/announcement', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ content }) });
-            alert("Đã lưu thông báo!");
+            document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+            event.currentTarget.classList.add('active');
         }
 
         async function load() {
-            const words = await (await fetch('/api/words')).json();
-            document.getElementById('l-ban').innerHTML = words.map(x => `<div class="item"><span>${x}</span><span class="del" onclick="del('words','${x}')">XOÁ</span></div>`).join('');
-            
-            const ann = await (await fetch('/api/announcement')).json();
-            document.getElementById('ann-input').value = ann.content || "";
-            
-            // Các hàm load acronyms, emojis, bot tương tự...
+            const b = await (await fetch('/api/words')).json();
+            document.getElementById('l-ban').innerHTML = b.map(x => `<div class="item"><span>${x}</span><span class="del" onclick="del('words','${x}')">XOÁ</span></div>`).join('');
+            const a = await (await fetch('/api/acronyms')).json();
+            document.getElementById('l-acr').innerHTML = a.map(x => `<div class="item"><span>${x.key} ➜ ${x.value}</span><span class="del" onclick="del('acronyms','${x.key}')">XOÁ</span></div>`).join('');
+            const e = await (await fetch('/api/emojis')).json();
+            document.getElementById('l-emo').innerHTML = e.map(x => `<div class="item"><span>${x.icon} ➜ ${x.text}</span><span class="del" onclick="del('emojis','${x._id}')">XOÁ</span></div>`).join('');
+            const o = await (await fetch('/api/bot')).json();
+            document.getElementById('l-bot').innerHTML = o.map(x => `<div class="item"><span>${x.keyword}: ${x.response}</span><span class="del" onclick="del('bot','${x._id}')">XOÁ</span></div>`).join('');
         }
 
         async function add(p, b) {
