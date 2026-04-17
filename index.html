@@ -3,33 +3,52 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BÈO CONTROL PANEL</title>
+    <title>BÈO CONTROL PANEL - PREMIUM</title>
     <script src="/socket.io/socket.io.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@600;700&display=swap" rel="stylesheet">
     <style>
-        :root { --pink: #fe2c55; --bg: #fff0f3; --panel: #ffffff; --green: #2ecc71; }
+        :root { --pink: #fe2c55; --bg: #fff0f3; --panel: #ffffff; --green: #2ecc71; --border: #f0f0f0; }
         
         body { font-family: 'Quicksand', sans-serif; background: var(--bg); margin: 0; padding: 15px; display: flex; gap: 15px; min-height: 100vh; box-sizing: border-box; }
         
-        .left-col { width: 300px; display: flex; flex-direction: column; gap: 15px; flex-shrink: 0; }
-        .right-col { flex: 1; display: flex; flex-direction: column; background: var(--panel); border-radius: 25px; border: 2px solid #fff; overflow: hidden; padding: 20px; box-shadow: 0 8px 20px rgba(254, 44, 85, 0.05); }
-        .card { background: var(--panel); padding: 20px; border-radius: 20px; border: 2px solid #fff; box-shadow: 0 8px 20px rgba(254, 44, 85, 0.05); }
+        /* LAYOUT CHÍNH */
+        .left-col { width: 320px; display: flex; flex-direction: column; gap: 15px; flex-shrink: 0; }
+        .right-col { flex: 1; display: flex; flex-direction: column; background: var(--panel); border-radius: 25px; border: 1px solid var(--border); overflow: hidden; padding: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.03); }
+        .card { background: var(--panel); padding: 20px; border-radius: 20px; border: 1px solid var(--border); box-shadow: 0 8px 20px rgba(0,0,0,0.02); }
         
-        /* ĐỒNG HỒ DECOR */
-        .clock-box { text-align: center; font-size: 24px; font-weight: 700; color: var(--pink); background: #fff; border-radius: 15px; padding: 10px; margin-bottom: 10px; border: 2px dashed #ffdae0; }
-        .clock-date { font-size: 12px; color: #888; display: block; }
+        /* HEADER: ĐỒNG HỒ & FOLLOW */
+        .header-decor { display: flex; justify-content: space-between; align-items: center; background: white; padding: 15px 20px; border-radius: 20px; border: 1px solid var(--border); margin-bottom: 15px; }
+        
+        .clock-section { text-align: left; }
+        #digital-clock { font-size: 28px; font-weight: 700; color: var(--pink); line-height: 1; }
+        .date-box { font-size: 11px; color: #666; margin-top: 5px; }
+        .lunar-date { color: #8e44ad; font-weight: bold; }
 
-        /* Ô CHAT */
-        #chat { height: 500px; overflow-y: auto; display: flex; flex-direction: column-reverse; background: #fafafa; border-radius: 15px; padding: 10px; border: 1px solid #fff5f7; }
-        .msg { padding: 10px; border-bottom: 1px solid #eee; font-size: 15px; line-height: 1.4; }
+        .follow-section { text-align: right; background: #fff5f7; padding: 8px 15px; border-radius: 15px; border: 1px solid #ffdae0; }
+        .follow-label { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: var(--pink); font-weight: 700; }
+        #follow-count { font-size: 24px; font-weight: 700; color: #333; display: block; }
+
+        /* KHUNG CHAT SANG TRỌNG */
+        #chat { 
+            height: 500px; 
+            overflow-y: auto; 
+            display: flex; 
+            flex-direction: column-reverse; 
+            background: #ffffff; 
+            border-radius: 20px; 
+            padding: 10px; 
+            border: 1px solid #eeeeee; /* Đường viền mỏng sang trọng */
+        }
+        .msg { padding: 12px; border-bottom: 1px solid #f9f9f9; font-size: 15px; transition: 0.3s; }
+        .msg:hover { background: #fff9fa; }
         
-        /* MÀU SẮC CMT */
         .user-name { color: var(--pink); font-weight: bold; }
         .system-name { color: var(--green); font-weight: bold; }
 
         /* UI ELEMENTS */
         input[type="text"] { width: 100%; padding: 12px; border-radius: 12px; border: 1px solid #ffdae0; outline: none; margin-bottom: 10px; box-sizing: border-box; font-size: 16px; }
-        button.conn-btn { width: 100%; padding: 12px; background: var(--pink); color: white; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; }
+        button.conn-btn { width: 100%; padding: 12px; background: var(--pink); color: white; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; transition: 0.3s; }
+        button.conn-btn:hover { opacity: 0.9; transform: translateY(-1px); }
         
         .sw-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #f9f9f9; font-size: 14px; font-weight: bold; color: #4a1c2c; }
         .switch { position: relative; width: 38px; height: 20px; }
@@ -39,22 +58,30 @@
         input:checked + .slider { background: var(--pink); }
         input:checked + .slider:before { transform: translateX(18px); }
 
-        input[type="range"] { width: 100%; accent-color: var(--pink); margin-top: 5px; }
         .admin-link { display: block; text-align: center; margin-top: 15px; color: var(--pink); text-decoration: none; font-size: 13px; font-weight: bold; }
 
         @media (max-width: 768px) {
             body { flex-direction: column; height: auto; overflow-y: auto; }
             .left-col { width: 100%; }
-            .right-col { width: 100%; margin-top: 10px; height: auto; padding: 15px; }
+            .header-decor { padding: 10px 15px; }
             #chat { height: 400px; }
         }
     </style>
 </head>
 <body>
     <div class="left-col">
-        <div class="clock-box">
-            <span id="digital-clock">00:00:00</span>
-            <span class="clock-date" id="digital-date">17 tháng 04, 2026</span>
+        <div class="header-decor">
+            <div class="clock-section">
+                <div id="digital-clock">00:00:00</div>
+                <div class="date-box">
+                    <span id="digital-date">17/04/2026</span><br>
+                    <span class="lunar-date" id="lunar-date">Âm lịch: Đang tải...</span>
+                </div>
+            </div>
+            <div class="follow-section">
+                <span class="follow-label">Followers</span>
+                <span id="follow-count">0</span>
+            </div>
         </div>
 
         <div class="card">
@@ -64,12 +91,7 @@
         </div>
 
         <div class="card">
-            <div class="sw-item" style="background: #fff5f7; border-radius: 10px; padding: 10px;">
-                <span>🔇 TẮT TIẾNG ĐỌC</span>
-                <label class="switch"><input type="checkbox" id="muteToggle"><span class="slider"></span></label>
-            </div>
-            <hr style="border: 0; border-top: 1px solid #eee; margin: 10px 0;">
-            
+            <div class="sw-item" style="color: #666;">🔇 TẮT TIẾNG ĐỌC <label class="switch"><input type="checkbox" id="muteToggle"><span class="slider"></span></label></div>
             <div class="sw-item">Chào mừng <label class="switch"><input type="checkbox" id="welcomeToggle" checked><span class="slider"></span></label></div>
             <div class="sw-item">Tặng quà <label class="switch"><input type="checkbox" id="giftToggle" checked><span class="slider"></span></label></div>
             <div class="sw-item">Kêu gọi PK <label class="switch"><input type="checkbox" id="pkToggle" checked><span class="slider"></span></label></div>
@@ -85,7 +107,7 @@
     </div>
 
     <div class="right-col">
-        <h3 style="margin:0 0 10px 0; color:#333; font-size:16px">Lịch sử hoạt động</h3>
+        <h3 style="margin:0 0 15px 0; color:#333; font-size:16px; font-weight: 700;">Lịch sử hoạt động</h3>
         <div id="chat"></div>
     </div>
 
@@ -94,13 +116,17 @@
         let queue = [];
         let playing = false;
 
-        // ĐỒNG HỒ
+        // HÀM TÍNH LỊCH ÂM ĐƠN GIẢN (DEMO - Bạn có thể thay bằng thư viện chuyên dụng)
+        function getLunarDate(d) {
+            // Đây là hiển thị giả lập để minh họa vị trí, bạn có thể tích hợp thư viện amlich.js nếu cần chính xác tuyệt đối
+            return "20 tháng 02 (Ất Tỵ)";
+        }
+
         function updateClock() {
             const now = new Date();
-            const timeStr = now.toLocaleTimeString('vi-VN', { hour12: false });
-            const dateStr = now.toLocaleDateString('vi-VN', { day: '2-digit', month: 'long', year: 'numeric' });
-            document.getElementById('digital-clock').innerText = timeStr;
-            document.getElementById('digital-date').innerText = dateStr;
+            document.getElementById('digital-clock').innerText = now.toLocaleTimeString('vi-VN', { hour12: false });
+            document.getElementById('digital-date').innerText = now.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+            document.getElementById('lunar-date').innerText = "Âm lịch: " + getLunarDate(now);
         }
         setInterval(updateClock, 1000);
         updateClock();
@@ -115,23 +141,26 @@
             }
         }
 
+        // Cập nhật số follow từ server
+        socket.on('room-info', data => {
+            if(data.followerCount) {
+                document.getElementById('follow-count').innerText = data.followerCount.toLocaleString();
+            }
+        });
+
         socket.on('status', m => document.getElementById('stt').innerText = m);
 
         socket.on('audio-data', d => {
             const chat = document.getElementById('chat');
             const div = document.createElement('div'); div.className = 'msg';
             
-            // THAY ĐỔI MÀU SẮC THEO LOẠI
-            const isSystem = ['welcome', 'gift', 'pk', 'bot'].includes(d.type) || d.user === "Hệ thống" || d.user === "QUÀ" || d.user === "HỆ THỐNG";
+            const isSystem = ['welcome', 'gift', 'pk', 'bot'].includes(d.type) || ["Hệ thống", "QUÀ", "HỆ THỐNG"].includes(d.user);
             const labelClass = isSystem ? 'system-name' : 'user-name';
             
             div.innerHTML = `<b class="${labelClass}">${d.user}:</b> ${d.comment}`;
             chat.prepend(div);
 
-            // KIỂM TRA NÚT MUTE TRƯỚC KHI CHO VÀO HÀNG ĐỢI
-            const isMuted = document.getElementById('muteToggle').checked;
-
-            if (d.audio && !isMuted) {
+            if (d.audio && !document.getElementById('muteToggle').checked) {
                 const pkOnly = document.getElementById('pkOnly').checked;
                 if (pkOnly) {
                     if (d.type === 'pk' && document.getElementById('pkToggle').checked) queue.push(d.audio);
@@ -147,13 +176,7 @@
         });
 
         function play() {
-            // Nếu lỡ đang chơi mà bấm Mute, xóa hàng đợi
-            if (document.getElementById('muteToggle').checked) {
-                queue = [];
-                playing = false;
-                return;
-            }
-
+            if (document.getElementById('muteToggle').checked) { queue = []; playing = false; return; }
             if (!queue.length) { playing = false; return; }
             playing = true;
             const a = new Audio(queue.shift());
