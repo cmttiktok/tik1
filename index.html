@@ -2,28 +2,41 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BÈO CONTROL PANEL</title>
     <script src="/socket.io/socket.io.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@600;700&display=swap" rel="stylesheet">
     <style>
         :root { --pink: #fe2c55; --bg: #fff0f3; --panel: #ffffff; }
-        body { font-family: 'Quicksand', sans-serif; background: var(--bg); margin: 0; padding: 15px; display: flex; gap: 15px; height: 100vh; box-sizing: border-box; }
         
-        /* LAYOUT PC */
+        /* Cấu trúc chung: Cho phép cuộn trang tự nhiên */
+        body { 
+            font-family: 'Quicksand', sans-serif; 
+            background: var(--bg); 
+            margin: 0; 
+            padding: 15px; 
+            display: flex; 
+            gap: 15px; 
+            min-height: 100vh; 
+            box-sizing: border-box; 
+        }
+        
+        /* PC: Giữ nguyên giao diện 2 cột */
         .left-col { width: 300px; display: flex; flex-direction: column; gap: 15px; flex-shrink: 0; }
-        .right-col { flex: 1; display: flex; flex-direction: column; background: var(--panel); border-radius: 25px; border: 2px solid #fff; overflow: hidden; padding: 20px; box-shadow: 0 8px 20px rgba(254,44,85,0.05); }
+        .right-col { flex: 1; display: flex; flex-direction: column; background: var(--panel); border-radius: 25px; border: 2px solid #fff; overflow: hidden; padding: 20px; box-shadow: 0 8px 20px rgba(254, 44, 85, 0.05); }
         
-        /* KHUNG CHAT: Giới hạn chiều cao và cho phép cuộn nội bộ */
+        .card { background: var(--panel); padding: 20px; border-radius: 20px; border: 2px solid #fff; box-shadow: 0 8px 20px rgba(254, 44, 85, 0.05); }
+        
+        /* Ô CHAT: Cố định chiều cao để không đẩy trang quá dài, nhưng vẫn nằm trong trang có thể cuộn */
         #chat { 
-            flex: 1; 
+            height: 500px; /* Chiều cao cố định đủ cho khoảng 12-15 dòng */
             overflow-y: auto; 
             display: flex; 
             flex-direction: column-reverse; 
-            border: 1px solid #fff5f7;
+            background: #fafafa;
             border-radius: 15px;
             padding: 10px;
-            background: #fafafa;
+            border: 1px solid #fff5f7;
         }
         .msg { padding: 10px; border-bottom: 1px solid #eee; font-size: 15px; line-height: 1.4; }
 
@@ -42,19 +55,22 @@
         input[type="range"] { width: 100%; accent-color: var(--pink); margin-top: 5px; }
         .admin-link { display: block; text-align: center; margin-top: 15px; color: var(--pink); text-decoration: none; font-size: 13px; font-weight: bold; }
 
-        /* GIAO DIỆN MOBILE TỐI ƯU */
+        /* TỐI ƯU MOBILE: CHUYỂN SANG CUỘN TOÀN TRANG */
         @media (max-width: 768px) {
-            body { flex-direction: column; height: 100vh; padding: 10px; overflow: hidden; } /* Khóa không cho cả trang web bị kéo dài */
-            .left-col { width: 100%; flex-shrink: 0; }
+            body { 
+                flex-direction: column; 
+                height: auto; /* Cho phép body dài ra theo nội dung */
+                overflow-y: auto; /* Kích hoạt cuộn toàn trang */
+            }
+            .left-col { width: 100%; }
             .right-col { 
                 width: 100%; 
-                flex: 1; /* Tự động lấy phần diện tích còn lại của màn hình */
-                margin-top: 5px; 
+                margin-top: 10px; 
+                height: auto; 
                 padding: 15px; 
-                min-height: 0; /* Quan trọng để flex-child có thể cuộn nội bộ */
             }
             #chat { 
-                max-height: 350px; /* Giới hạn khoảng 12 dòng chat trên mobile */
+                height: 400px; /* Giữ ô chat ở mức 12 dòng, tránh bị quá nhỏ trên máy lùn */
             }
         }
     </style>
@@ -92,7 +108,6 @@
         let queue = [];
         let playing = false;
 
-        // Đảm bảo dùng start() và 'set-username' như code gốc
         function start() {
             const u = document.getElementById('user').value;
             if(u) {
