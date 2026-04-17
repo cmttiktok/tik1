@@ -7,38 +7,25 @@
     <script src="/socket.io/socket.io.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@600;700&display=swap" rel="stylesheet">
     <style>
-        :root { --pink: #fe2c55; --bg: #fff0f3; --panel: #ffffff; }
+        :root { --pink: #fe2c55; --bg: #fff0f3; --panel: #ffffff; --green: #2ecc71; }
         
-        /* Cấu trúc chung: Cho phép cuộn trang tự nhiên */
-        body { 
-            font-family: 'Quicksand', sans-serif; 
-            background: var(--bg); 
-            margin: 0; 
-            padding: 15px; 
-            display: flex; 
-            gap: 15px; 
-            min-height: 100vh; 
-            box-sizing: border-box; 
-        }
+        body { font-family: 'Quicksand', sans-serif; background: var(--bg); margin: 0; padding: 15px; display: flex; gap: 15px; min-height: 100vh; box-sizing: border-box; }
         
-        /* PC: Giữ nguyên giao diện 2 cột */
         .left-col { width: 300px; display: flex; flex-direction: column; gap: 15px; flex-shrink: 0; }
         .right-col { flex: 1; display: flex; flex-direction: column; background: var(--panel); border-radius: 25px; border: 2px solid #fff; overflow: hidden; padding: 20px; box-shadow: 0 8px 20px rgba(254, 44, 85, 0.05); }
-        
         .card { background: var(--panel); padding: 20px; border-radius: 20px; border: 2px solid #fff; box-shadow: 0 8px 20px rgba(254, 44, 85, 0.05); }
         
-        /* Ô CHAT: Cố định chiều cao để không đẩy trang quá dài, nhưng vẫn nằm trong trang có thể cuộn */
-        #chat { 
-            height: 500px; /* Chiều cao cố định đủ cho khoảng 12-15 dòng */
-            overflow-y: auto; 
-            display: flex; 
-            flex-direction: column-reverse; 
-            background: #fafafa;
-            border-radius: 15px;
-            padding: 10px;
-            border: 1px solid #fff5f7;
-        }
+        /* ĐỒNG HỒ DECOR */
+        .clock-box { text-align: center; font-size: 24px; font-weight: 700; color: var(--pink); background: #fff; border-radius: 15px; padding: 10px; margin-bottom: 10px; border: 2px dashed #ffdae0; }
+        .clock-date { font-size: 12px; color: #888; display: block; }
+
+        /* Ô CHAT */
+        #chat { height: 500px; overflow-y: auto; display: flex; flex-direction: column-reverse; background: #fafafa; border-radius: 15px; padding: 10px; border: 1px solid #fff5f7; }
         .msg { padding: 10px; border-bottom: 1px solid #eee; font-size: 15px; line-height: 1.4; }
+        
+        /* MÀU SẮC CMT */
+        .user-name { color: var(--pink); font-weight: bold; }
+        .system-name { color: var(--green); font-weight: bold; }
 
         /* UI ELEMENTS */
         input[type="text"] { width: 100%; padding: 12px; border-radius: 12px; border: 1px solid #ffdae0; outline: none; margin-bottom: 10px; box-sizing: border-box; font-size: 16px; }
@@ -55,28 +42,21 @@
         input[type="range"] { width: 100%; accent-color: var(--pink); margin-top: 5px; }
         .admin-link { display: block; text-align: center; margin-top: 15px; color: var(--pink); text-decoration: none; font-size: 13px; font-weight: bold; }
 
-        /* TỐI ƯU MOBILE: CHUYỂN SANG CUỘN TOÀN TRANG */
         @media (max-width: 768px) {
-            body { 
-                flex-direction: column; 
-                height: auto; /* Cho phép body dài ra theo nội dung */
-                overflow-y: auto; /* Kích hoạt cuộn toàn trang */
-            }
+            body { flex-direction: column; height: auto; overflow-y: auto; }
             .left-col { width: 100%; }
-            .right-col { 
-                width: 100%; 
-                margin-top: 10px; 
-                height: auto; 
-                padding: 15px; 
-            }
-            #chat { 
-                height: 400px; /* Giữ ô chat ở mức 12 dòng, tránh bị quá nhỏ trên máy lùn */
-            }
+            .right-col { width: 100%; margin-top: 10px; height: auto; padding: 15px; }
+            #chat { height: 400px; }
         }
     </style>
 </head>
 <body>
     <div class="left-col">
+        <div class="clock-box">
+            <span id="digital-clock">00:00:00</span>
+            <span class="clock-date" id="digital-date">17 tháng 04, 2026</span>
+        </div>
+
         <div class="card">
             <input type="text" id="user" placeholder="Nhập ID TikTok...">
             <button class="conn-btn" onclick="start()">KẾT NỐI LIVE</button>
@@ -84,6 +64,12 @@
         </div>
 
         <div class="card">
+            <div class="sw-item" style="background: #fff5f7; border-radius: 10px; padding: 10px;">
+                <span>🔇 TẮT TIẾNG ĐỌC</span>
+                <label class="switch"><input type="checkbox" id="muteToggle"><span class="slider"></span></label>
+            </div>
+            <hr style="border: 0; border-top: 1px solid #eee; margin: 10px 0;">
+            
             <div class="sw-item">Chào mừng <label class="switch"><input type="checkbox" id="welcomeToggle" checked><span class="slider"></span></label></div>
             <div class="sw-item">Tặng quà <label class="switch"><input type="checkbox" id="giftToggle" checked><span class="slider"></span></label></div>
             <div class="sw-item">Kêu gọi PK <label class="switch"><input type="checkbox" id="pkToggle" checked><span class="slider"></span></label></div>
@@ -108,6 +94,17 @@
         let queue = [];
         let playing = false;
 
+        // ĐỒNG HỒ
+        function updateClock() {
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString('vi-VN', { hour12: false });
+            const dateStr = now.toLocaleDateString('vi-VN', { day: '2-digit', month: 'long', year: 'numeric' });
+            document.getElementById('digital-clock').innerText = timeStr;
+            document.getElementById('digital-date').innerText = dateStr;
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+
         function start() {
             const u = document.getElementById('user').value;
             if(u) {
@@ -123,10 +120,18 @@
         socket.on('audio-data', d => {
             const chat = document.getElementById('chat');
             const div = document.createElement('div'); div.className = 'msg';
-            div.innerHTML = `<b style="color:var(--pink)">${d.user}:</b> ${d.comment}`;
+            
+            // THAY ĐỔI MÀU SẮC THEO LOẠI
+            const isSystem = ['welcome', 'gift', 'pk', 'bot'].includes(d.type) || d.user === "Hệ thống" || d.user === "QUÀ" || d.user === "HỆ THỐNG";
+            const labelClass = isSystem ? 'system-name' : 'user-name';
+            
+            div.innerHTML = `<b class="${labelClass}">${d.user}:</b> ${d.comment}`;
             chat.prepend(div);
 
-            if (d.audio) {
+            // KIỂM TRA NÚT MUTE TRƯỚC KHI CHO VÀO HÀNG ĐỢI
+            const isMuted = document.getElementById('muteToggle').checked;
+
+            if (d.audio && !isMuted) {
                 const pkOnly = document.getElementById('pkOnly').checked;
                 if (pkOnly) {
                     if (d.type === 'pk' && document.getElementById('pkToggle').checked) queue.push(d.audio);
@@ -142,6 +147,13 @@
         });
 
         function play() {
+            // Nếu lỡ đang chơi mà bấm Mute, xóa hàng đợi
+            if (document.getElementById('muteToggle').checked) {
+                queue = [];
+                playing = false;
+                return;
+            }
+
             if (!queue.length) { playing = false; return; }
             playing = true;
             const a = new Audio(queue.shift());
