@@ -21,22 +21,27 @@ const EmojiMap = mongoose.model('EmojiMap', { icon: String, text: String });
 const BotAnswer = mongoose.model('BotAnswer', { keyword: String, response: String });
 const Announcement = mongoose.model('Announcement', { content: String });
 
-// API cho Admin
+// --- KHÔI PHỤC API ADMIN ---
 app.get('/api/words', async (req, res) => res.json((await BannedWord.find()).map(w => w.word)));
 app.post('/api/words', async (req, res) => { if (req.body.word) await new BannedWord({ word: req.body.word }).save(); res.sendStatus(200); });
 app.delete('/api/words/:word', async (req, res) => { await BannedWord.deleteOne({ word: req.params.word }); res.sendStatus(200); });
+
 app.get('/api/acronyms', async (req, res) => res.json(await Acronym.find()));
 app.post('/api/acronyms', async (req, res) => { await new Acronym(req.body).save(); res.sendStatus(200); });
 app.delete('/api/acronyms/:key', async (req, res) => { await Acronym.deleteOne({ key: req.params.key }); res.sendStatus(200); });
+
 app.get('/api/emojis', async (req, res) => res.json(await EmojiMap.find()));
 app.post('/api/emojis', async (req, res) => { await new EmojiMap(req.body).save(); res.sendStatus(200); });
 app.delete('/api/emojis/:id', async (req, res) => { await EmojiMap.findByIdAndDelete(req.params.id); res.sendStatus(200); });
+
 app.get('/api/bot', async (req, res) => res.json(await BotAnswer.find()));
 app.post('/api/bot', async (req, res) => { await new BotAnswer(req.body).save(); res.sendStatus(200); });
 app.delete('/api/bot/:id', async (req, res) => { await BotAnswer.findByIdAndDelete(req.params.id); res.sendStatus(200); });
+
 app.get('/api/announcement', async (req, res) => res.json(await Announcement.findOne() || { content: "" }));
 app.post('/api/announcement', async (req, res) => { await Announcement.deleteMany({}); await new Announcement({ content: req.body.content }).save(); res.sendStatus(200); });
 
+// --- LOGIC XỬ LÝ ---
 async function processText(text) {
     if (!text) return "";
     const banned = await BannedWord.find();
@@ -73,9 +78,9 @@ io.on('connection', (socket) => {
             if(state.roomInfo) socket.emit('room-info', { followerCount: state.roomInfo.stats.followerCount });
         }).catch(() => socket.emit('status', 'Lỗi kết nối!'));
 
-        const updateF = (data) => { if(data.followerCount) socket.emit('room-info', { followerCount: data.followerCount }); };
-        tiktok.on('roomUser', updateF); tiktok.on('roomState', updateF);
-        
+        const upF = (data) => { if(data.followerCount) socket.emit('room-info', { followerCount: data.followerCount }); };
+        tiktok.on('roomUser', upF); tiktok.on('roomState', upF);
+
         tiktok.on('chat', async (data) => {
             const bot = await BotAnswer.findOne({ keyword: data.comment.toLowerCase() });
             if (bot) {
