@@ -15,26 +15,41 @@ app.use(express.json());
 const MONGODB_URI = "mongodb+srv://baoboi97:baoboi97@cluster0.skkajlz.mongodb.net/tiktok_tts?retryWrites=true&w=majority&appName=Cluster0";
 mongoose.connect(MONGODB_URI).then(() => console.log("✅ MongoDB Connected"));
 
+// Models
 const BannedWord = mongoose.model('BannedWord', { word: String });
 const Acronym = mongoose.model('Acronym', { key: String, value: String });
 const EmojiMap = mongoose.model('EmojiMap', { icon: String, text: String });
 const BotAnswer = mongoose.model('BotAnswer', { keyword: String, response: String });
+const Announcement = mongoose.model('Announcement', { content: String });
 
-// --- API QUẢN TRỊ (KHÔI PHỤC HOÀN TOÀN) ---
+// --- API QUẢN TRỊ ---
 app.get('/api/words', async (req, res) => res.json((await BannedWord.find()).map(w => w.word)));
 app.post('/api/words', async (req, res) => { if (req.body.word) await new BannedWord({ word: req.body.word }).save(); res.sendStatus(200); });
 app.delete('/api/words/:word', async (req, res) => { await BannedWord.deleteOne({ word: req.params.word }); res.sendStatus(200); });
+
 app.get('/api/acronyms', async (req, res) => res.json(await Acronym.find()));
 app.post('/api/acronyms', async (req, res) => { await new Acronym(req.body).save(); res.sendStatus(200); });
 app.delete('/api/acronyms/:key', async (req, res) => { await Acronym.deleteOne({ key: req.params.key }); res.sendStatus(200); });
+
 app.get('/api/emojis', async (req, res) => res.json(await EmojiMap.find()));
 app.post('/api/emojis', async (req, res) => { await new EmojiMap(req.body).save(); res.sendStatus(200); });
 app.delete('/api/emojis/:id', async (req, res) => { await EmojiMap.findByIdAndDelete(req.params.id); res.sendStatus(200); });
+
 app.get('/api/bot', async (req, res) => res.json(await BotAnswer.find()));
 app.post('/api/bot', async (req, res) => { await new BotAnswer(req.body).save(); res.sendStatus(200); });
 app.delete('/api/bot/:id', async (req, res) => { await BotAnswer.findByIdAndDelete(req.params.id); res.sendStatus(200); });
 
-// --- LOGIC XỬ LÝ ĐỌC ---
+app.get('/api/announcement', async (req, res) => {
+    const data = await Announcement.findOne();
+    res.json(data || { content: "" });
+});
+app.post('/api/announcement', async (req, res) => {
+    await Announcement.deleteMany({});
+    await new Announcement({ content: req.body.content }).save();
+    res.sendStatus(200);
+});
+
+// --- LOGIC XỬ LÝ TEXT & AUDIO ---
 async function processText(text) {
     if (!text) return "";
     const banned = await BannedWord.find();
@@ -72,13 +87,11 @@ io.on('connection', (socket) => {
             if(state.roomInfo) socket.emit('room-info', { followerCount: state.roomInfo.stats.followerCount });
         }).catch(() => socket.emit('status', 'Lỗi kết nối!'));
 
-        // Sửa lỗi Follow: Lắng nghe đồng thời 3 sự kiện để đảm bảo nhảy số
-        const updateFollow = (data) => {
-            if(data && data.followerCount) socket.emit('room-info', { followerCount: data.followerCount });
-        };
-        tiktok.on('roomUser', updateFollow);
-        tiktok.on('roomState', updateFollow);
-        tiktok.on('social', updateFollow);
+        // Lắng nghe đếm follow đa điểm
+        const sendFollow = (data) => { if(data.followerCount) socket.emit('room-info', { followerCount: data.followerCount }); };
+        tiktok.on('roomUser', sendFollow);
+        tiktok.on('roomState', sendFollow);
+        tiktok.on('social', (data) => { if(data.type === 'follow') tiktok.getRoomInfo().then(sendFollow); });
 
         tiktok.on('chat', async (data) => {
             const bot = await BotAnswer.findOne({ keyword: data.comment.toLowerCase() });
