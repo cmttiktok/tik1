@@ -2,54 +2,47 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <title>BÈO ADMIN - QUẢN LÝ DỮ LIỆU</title>
+    <title>BÈO ADMIN</title>
     <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@600&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Quicksand', sans-serif; background: #fff0f3; padding: 20px; }
-        .container { max-width: 600px; margin: auto; background: white; padding: 25px; border-radius: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+        .container { max-width: 500px; margin: auto; background: white; padding: 25px; border-radius: 20px; }
         .tabs { display: flex; gap: 5px; margin-bottom: 20px; }
-        .tab { flex: 1; padding: 10px; text-align: center; background: #eee; border-radius: 10px; cursor: pointer; font-size: 11px; font-weight: bold; }
+        .tab { flex: 1; padding: 10px; text-align: center; background: #eee; border-radius: 10px; cursor: pointer; font-size: 12px; font-weight: bold; }
         .active { background: #fe2c55; color: white; }
         input { width: 100%; padding: 12px; margin: 5px 0; border-radius: 10px; border: 1px solid #ddd; box-sizing: border-box; }
         button { width: 100%; padding: 12px; background: #333; color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; margin-top: 10px; }
         .item { display: flex; justify-content: space-between; padding: 10px; border-bottom: 1px solid #eee; font-size: 14px; }
-        .del { color: red; cursor: pointer; font-weight: bold; }
     </style>
 </head>
 <body onload="load()">
     <div class="container">
-        <h3 style="text-align: center; color: #fe2c55;">QUẢN LÝ DỮ LIỆU</h3>
         <div class="tabs">
-            <div class="tab active" onclick="show('ban')">TỪ CẤM</div>
+            <div class="tab active" onclick="show('ann')">THÔNG BÁO</div>
             <div class="tab" onclick="show('acr')">VIẾT TẮT</div>
-            <div class="tab" onclick="show('emo')">EMOJI</div>
             <div class="tab" onclick="show('bot')">TRỢ LÝ</div>
         </div>
 
-        <div id="ban" class="section">
-            <input type="text" id="i-ban" placeholder="Từ cấm...">
-            <button onclick="add('words', {word: document.getElementById('i-ban').value})">THÊM</button>
-            <div id="l-ban"></div>
+        <div id="ann" class="section">
+            <input type="text" id="ann-text" placeholder="Nội dung chạy ngang">
+            <div style="margin:10px 0">
+                Màu: <input type="color" id="ann-color" style="width:50px"> 
+                7 màu: <input type="checkbox" id="ann-rainbow">
+            </div>
+            <button onclick="saveAnn()">CẬP NHẬT</button>
         </div>
 
         <div id="acr" class="section" style="display:none">
-            <input type="text" id="i-acr-k" placeholder="Từ gốc (vd: k)">
-            <input type="text" id="i-acr-v" placeholder="Đọc thành (vd: không)">
-            <button onclick="add('acronyms', {key: document.getElementById('i-acr-k').value, value: document.getElementById('i-acr-v').value})">THÊM</button>
+            <input type="text" id="acr-k" placeholder="Từ gốc">
+            <input type="text" id="acr-v" placeholder="Đọc thành">
+            <button onclick="add('acronyms', {key: document.getElementById('acr-k').value, value: document.getElementById('acr-v').value})">THÊM</button>
             <div id="l-acr"></div>
         </div>
 
-        <div id="emo" class="section" style="display:none">
-            <input type="text" id="i-emo-i" placeholder="Emoji (vd: ❤️)">
-            <input type="text" id="i-emo-t" placeholder="Đọc thành (vd: tim)">
-            <button onclick="add('emojis', {icon: document.getElementById('i-emo-i').value, text: document.getElementById('i-emo-t').value})">THÊM</button>
-            <div id="l-emo"></div>
-        </div>
-
         <div id="bot" class="section" style="display:none">
-            <input type="text" id="i-bot-k" placeholder="Từ khóa">
-            <input type="text" id="i-bot-v" placeholder="Câu trả lời">
-            <button onclick="add('bot', {keyword: document.getElementById('i-bot-k').value, response: document.getElementById('i-bot-v').value})">THÊM</button>
+            <input type="text" id="bot-k" placeholder="Từ khóa">
+            <input type="text" id="bot-v" placeholder="Trả lời">
+            <button onclick="add('bot', {keyword: document.getElementById('bot-k').value, response: document.getElementById('bot-v').value})">THÊM</button>
             <div id="l-bot"></div>
         </div>
     </div>
@@ -63,25 +56,32 @@
         }
 
         async function load() {
-            const b = await (await fetch('/api/words')).json();
-            document.getElementById('l-ban').innerHTML = b.map(x => `<div class="item"><span>${x}</span><span class="del" onclick="del('words','${x}')">XOÁ</span></div>`).join('');
+            const ann = await (await fetch('/api/announcement')).json();
+            document.getElementById('ann-text').value = ann.text;
+            document.getElementById('ann-color').value = ann.color;
+            document.getElementById('ann-rainbow').checked = ann.isRainbow;
+
             const a = await (await fetch('/api/acronyms')).json();
-            document.getElementById('l-acr').innerHTML = a.map(x => `<div class="item"><span>${x.key} ➜ ${x.value}</span><span class="del" onclick="del('acronyms','${x.key}')">XOÁ</span></div>`).join('');
-            const e = await (await fetch('/api/emojis')).json();
-            document.getElementById('l-emo').innerHTML = e.map(x => `<div class="item"><span>${x.icon} ➜ ${x.text}</span><span class="del" onclick="del('emojis','${x._id}')">XOÁ</span></div>`).join('');
+            document.getElementById('l-acr').innerHTML = a.map(x => `<div class="item">${x.key} ➜ ${x.value} <span onclick="del('acronyms','${x.key}')" style="color:red">X</span></div>`).join('');
             const o = await (await fetch('/api/bot')).json();
-            document.getElementById('l-bot').innerHTML = o.map(x => `<div class="item"><span>${x.keyword}: ${x.response}</span><span class="del" onclick="del('bot','${x._id}')">XOÁ</span></div>`).join('');
+            document.getElementById('l-bot').innerHTML = o.map(x => `<div class="item">${x.keyword}: ${x.response} <span onclick="del('bot','${x._id}')" style="color:red">X</span></div>`).join('');
         }
 
-        async function add(p, b) {
-            await fetch('/api/'+p, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(b)});
-            load();
+        async function saveAnn() {
+            await fetch('/api/announcement', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    text: document.getElementById('ann-text').value,
+                    color: document.getElementById('ann-color').value,
+                    isRainbow: document.getElementById('ann-rainbow').checked
+                })
+            });
+            alert("Đã lưu!");
         }
 
-        async function del(p, id) {
-            await fetch(`/api/${p}/${id}`, {method:'DELETE'});
-            load();
-        }
+        async function add(p, b) { await fetch('/api/'+p, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(b)}); load(); }
+        async function del(p, id) { await fetch(`/api/${p}/${id}`, {method:'DELETE'}); load(); }
     </script>
 </body>
 </html>
