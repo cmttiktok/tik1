@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BÈO CONTROL PANEL - FINAL</title>
+    <title>BÈO CONTROL PANEL</title>
     <script src="/socket.io/socket.io.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/nosleep/0.12.0/NoSleep.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@600;700&display=swap" rel="stylesheet">
     <style>
         :root { --pink: #fe2c55; --bg: #fff0f3; --panel: #ffffff; --green: #2ecc71; --border: #f0f0f0; }
@@ -14,24 +15,25 @@
         .card { background: var(--panel); padding: 18px; border-radius: 20px; border: 1px solid var(--border); box-shadow: 0 8px 20px rgba(0,0,0,0.02); }
         .header-decor { display: flex; justify-content: space-between; align-items: center; background: white; padding: 12px 20px; border-radius: 20px; border: 1px solid var(--border); }
         #digital-clock { font-size: 26px; font-weight: 700; color: var(--pink); line-height: 1; }
-        .date-box { font-size: 11px; color: #666; margin-top: 4px; text-align: left; }
-        .lunar-date { color: #8e44ad; font-weight: bold; }
-        .follow-section { text-align: right; background: #fff5f7; padding: 8px 15px; border-radius: 15px; border: 1px solid #ffdae0; min-width: 100px; }
+        .lunar-date { color: #8e44ad; font-weight: bold; font-size: 11px; }
+        .follow-section { text-align: right; background: #fff5f7; padding: 8px 15px; border-radius: 15px; border: 1px solid #ffdae0; }
         #follow-count { font-size: 24px; font-weight: 700; color: #333; display: block; }
         #chat { height: 450px; overflow-y: auto; display: flex; flex-direction: column-reverse; background: #ffffff; border-radius: 15px; padding: 10px; border: 1px solid #eeeeee; }
         .msg { padding: 10px; border-bottom: 1px solid #f9f9f9; font-size: 14px; }
         .user-name { color: var(--pink); font-weight: bold; }
         .system-name { color: var(--green); font-weight: bold; }
+        /* CSS Ẩn tin nhắn hệ thống khi bật công tắc */
+        .hide-system .msg-system { display: none !important; }
         input[type="text"] { width: 100%; padding: 12px; border-radius: 12px; border: 1px solid #ffdae0; outline: none; margin-bottom: 8px; box-sizing: border-box; }
         button.conn-btn { width: 100%; padding: 12px; background: var(--pink); color: white; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; }
-        .sw-item { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid #f9f9f9; font-size: 13px; font-weight: bold; }
+        .sw-item { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid #f9f9f9; font-size: 12px; font-weight: bold; }
         .switch { position: relative; width: 38px; height: 20px; }
         .switch input { opacity: 0; width: 0; height: 0; }
         .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background: #ddd; border-radius: 20px; transition: .4s; }
         .slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px; background: white; border-radius: 50%; transition: .4s; }
         input:checked + .slider { background: var(--pink); }
         input:checked + .slider:before { transform: translateX(18px); }
-        @media (max-width: 768px) { body { flex-direction: column; height: auto; } .left-col { width: 100%; } }
+        @media (max-width: 768px) { body { flex-direction: column; } .left-col { width: 100%; } }
     </style>
 </head>
 <body>
@@ -39,24 +41,20 @@
         <div class="header-decor">
             <div class="clock-section">
                 <div id="digital-clock">00:00:00</div>
-                <div class="date-box">
-                    <span id="digital-date">--/--/----</span><br>
-                    <span class="lunar-date" id="lunar-date">Đang tính...</span>
-                </div>
+                <div class="lunar-date" id="lunar-date">Đang tính...</div>
             </div>
             <div class="follow-section">
                 <span style="font-size: 9px; color: var(--pink); font-weight: 700;">FOLLOWERS</span>
                 <span id="follow-count">0</span>
             </div>
         </div>
-
         <div class="card">
             <input type="text" id="user" placeholder="Nhập ID TikTok...">
             <button class="conn-btn" onclick="start()">KẾT NỐI LIVE</button>
             <p id="stt" style="font-size:11px; color:gray; margin-top:5px; text-align:center">Sẵn sàng</p>
         </div>
-
         <div class="card">
+            <div class="sw-item" style="color:#2980b9">ẨN CMT HỆ THỐNG <label class="switch"><input type="checkbox" id="hideSysToggle" onchange="document.getElementById('chat').classList.toggle('hide-system', this.checked)"><span class="slider"></span></label></div>
             <div class="sw-item" style="color:var(--pink)">CHỈ NHẮC PK <label class="switch"><input type="checkbox" id="pkOnly"><span class="slider"></span></label></div>
             <div class="sw-item">Chào khách <label class="switch"><input type="checkbox" id="welcomeToggle" checked><span class="slider"></span></label></div>
             <div class="sw-item">Đọc quà <label class="switch"><input type="checkbox" id="giftToggle" checked><span class="slider"></span></label></div>
@@ -68,28 +66,25 @@
                 TỐC ĐỘ ĐỌC: <span id="speedVal" style="color:var(--pink)">1.0</span>x
                 <input type="range" id="speechSpeed" min="0.5" max="2" step="0.1" value="1" style="width:100%; accent-color:var(--pink)" oninput="document.getElementById('speedVal').innerText=this.value">
             </div>
-            <a href="/admin" target="_blank" style="display:block; text-align:center; margin-top:10px; font-size:12px; color:var(--pink); text-decoration:none; font-weight:bold;">⚙️ CÀI ĐẶT HỆ THỐNG</a>
         </div>
     </div>
-
     <div class="right-col">
-        <h3 style="margin:0 0 10px 0; font-size:16px; font-weight: 700;">Lịch sử hoạt động</h3>
+        <h3 style="margin:0 0 10px 0; font-size:16px;">Lịch sử hoạt động</h3>
         <div id="chat"></div>
     </div>
 
     <script>
         const socket = io();
         let queue = [], playing = false;
+        const noSleep = new NoSleep(); // Khởi tạo giữ sáng màn hình
 
         function getLunar(d) {
             const dayMap = { 17: "01", 18: "02", 19: "03", 20: "04" };
             return `Âm lịch: ${dayMap[d] || d}/03 (Bính Ngọ)`;
         }
-
         function updateClock() {
             const now = new Date();
             document.getElementById('digital-clock').innerText = now.toLocaleTimeString('vi-VN', { hour12: false });
-            document.getElementById('digital-date').innerText = now.toLocaleDateString('vi-VN');
             document.getElementById('lunar-date').innerText = getLunar(now.getDate());
         }
         setInterval(updateClock, 1000); updateClock();
@@ -99,21 +94,24 @@
             if(u) {
                 socket.emit('set-username', u);
                 document.getElementById('stt').innerText = "Đang kết nối...";
+                // Kích hoạt giữ sáng màn hình khi bấm nút
+                noSleep.enable();
             }
         }
 
         socket.on('room-info', data => {
-            if(data.followerCount !== undefined) {
-                document.getElementById('follow-count').innerText = data.followerCount.toLocaleString();
-            }
+            if(data.followerCount) document.getElementById('follow-count').innerText = data.followerCount.toLocaleString();
         });
 
         socket.on('status', m => document.getElementById('stt').innerText = m);
 
         socket.on('audio-data', d => {
             const chat = document.getElementById('chat');
-            const div = document.createElement('div'); div.className = 'msg';
-            const isSys = ['welcome','gift','pk','bot'].includes(d.type) || ["Hệ thống","QUÀ","TRỢ LÝ","HỆ THỐNG"].includes(d.user);
+            const div = document.createElement('div');
+            const isSys = ['welcome','gift','pk','bot'].includes(d.type) || ["Hệ thống","QUÀ","TRỢ LÝ"].includes(d.user);
+            
+            // Thêm class msg-system để ẩn khi cần
+            div.className = `msg ${isSys ? 'msg-system' : ''}`;
             div.innerHTML = `<b class="${isSys?'system-name':'user-name'}">${d.user}:</b> ${d.comment}`;
             chat.prepend(div);
 
