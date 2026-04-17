@@ -16,7 +16,70 @@ const MONGODB_URI = "mongodb+srv://baoboi97:baoboi97@cluster0.skkajlz.mongodb.ne
 mongoose.connect(MONGODB_URI).then(() => console.log("✅ MongoDB Connected"));
 
 const BannedWord = mongoose.model('BannedWord', { word: String });
+const Acronym = mongoose.model('Acronym', { key: String, value: String });
+const EmojiMap = mongoose.model('EmojiMap', { icon: String, text: String });
 const BotAnswer = mongoose.model('BotAnswer', { keyword: String, response: String });
+
+// --- API QUẢN TRỊ (KHÔI PHỤC HOÀN TOÀN ĐỂ TRANG ADMIN HOẠT ĐỘNG) ---
+app.get('/api/words', async (req, res) => res.json((await BannedWord.find()).map(w => w.word)));
+app.post('/api/words', async (req, res) => {
+    if (req.body.word) await new BannedWord({ word: req.body.word }).save();
+    res.sendStatus(200);
+});
+app.delete('/api/words/:word', async (req, res) => {
+    await BannedWord.deleteOne({ word: req.params.word });
+    res.sendStatus(200);
+});
+
+app.get('/api/acronyms', async (req, res) => res.json(await Acronym.find()));
+app.post('/api/acronyms', async (req, res) => {
+    await new Acronym(req.body).save();
+    res.sendStatus(200);
+});
+app.delete('/api/acronyms/:key', async (req, res) => {
+    await Acronym.deleteOne({ key: req.params.key });
+    res.sendStatus(200);
+});
+
+app.get('/api/emojis', async (req, res) => res.json(await EmojiMap.find()));
+app.post('/api/emojis', async (req, res) => {
+    await new EmojiMap(req.body).save();
+    res.sendStatus(200);
+});
+app.delete('/api/emojis/:id', async (req, res) => {
+    await EmojiMap.findByIdAndDelete(req.params.id);
+    res.sendStatus(200);
+});
+
+app.get('/api/bot', async (req, res) => res.json(await BotAnswer.find()));
+app.post('/api/bot', async (req, res) => {
+    await new BotAnswer(req.body).save();
+    res.sendStatus(200);
+});
+app.delete('/api/bot/:id', async (req, res) => {
+    await BotAnswer.findByIdAndDelete(req.params.id);
+    res.sendStatus(200);
+});
+
+// --- LOGIC TTS ---
+async function processText(text) {
+    if (!text) return "";
+    let processed = text;
+    // Kiểm tra từ cấm (chỉ không đọc, vẫn hiện cmt)
+    const banned = await BannedWord.find();
+    const hasBanned = banned.some(b => text.toLowerCase().includes(b.word.toLowerCase()));
+    if (hasBanned) return null; // Trả về null để không tạo audio
+
+    const emojis = await EmojiMap.find();
+    emojis.forEach(e => { processed = processed.split(e.icon).join(" " + e.text + " "); });
+    
+    const acronyms = await Acronym.find();
+    acronyms.forEach(a => {
+        const regex = new RegExp(`(?<!\\p{L})${a.key}(?!\\p{L})`, 'giu');
+        processed = processed.replace(regex, a.value);
+    });
+    return processed;
+}
 
 async function getGoogleAudio(text) {
     try {
@@ -31,46 +94,23 @@ app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, 'admin.html'))
 
 io.on('connection', (socket) => {
     let tiktok;
-    let pkTimer = null;
-
     socket.on('set-username', (username) => {
         if (tiktok) tiktok.disconnect();
         tiktok = new WebcastPushConnection(username);
         
         tiktok.connect().then(state => {
             socket.emit('status', `Đã kết nối: ${username}`);
-            // Đếm follow ngay khi kết nối
+            // Đếm follow chuẩn từ roomInfo
             if(state.roomInfo) socket.emit('room-info', { followerCount: state.roomInfo.stats.followerCount });
         }).catch(() => socket.emit('status', 'Lỗi kết nối!'));
 
-        // Lắng nghe đếm follow liên tục
-        tiktok.on('roomUser', (data) => {
+        tiktok.on('roomState', (data) => {
             if(data.followerCount) socket.emit('room-info', { followerCount: data.followerCount });
         });
 
-        // Nhắc PK khi có trận đấu
-        tiktok.on('linkMicBattle', () => {
-            if (pkTimer) clearInterval(pkTimer);
-            let timeLeft = 300; 
-            pkTimer = setInterval(async () => {
-                timeLeft--;
-                if (timeLeft === 20) {
-                    const audio = await getGoogleAudio("thả bông 20 giây cuối bèo ơi");
-                    socket.emit('audio-data', { type: 'pk', user: "HỆ THỐNG", comment: "NHẮC PK 20S", audio });
-                }
-                if (timeLeft <= 0) clearInterval(pkTimer);
-            }, 1000);
-        });
-
         tiktok.on('chat', async (data) => {
-            // Logic Trợ lý (Auto trả lời)
-            const bot = await BotAnswer.findOne({ keyword: data.comment.toLowerCase() });
-            if (bot) {
-                const audio = await getGoogleAudio(bot.response);
-                socket.emit('audio-data', { type: 'bot', user: "TRỢ LÝ", comment: bot.response, audio });
-            }
-            // Đọc chat bình thường
-            const audio = await getGoogleAudio(`${data.nickname} nói: ${data.comment}`);
+            const cleanText = await processText(data.comment);
+            const audio = cleanText ? await getGoogleAudio(`${data.nickname} nói: ${cleanText}`) : null;
             socket.emit('audio-data', { type: 'chat', user: data.nickname, comment: data.comment, audio });
         });
 
