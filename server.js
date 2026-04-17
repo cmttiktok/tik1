@@ -19,31 +19,26 @@ const BannedWord = mongoose.model('BannedWord', { word: String });
 const Acronym = mongoose.model('Acronym', { key: String, value: String });
 const EmojiMap = mongoose.model('EmojiMap', { icon: String, text: String });
 const BotAnswer = mongoose.model('BotAnswer', { keyword: String, response: String });
-const Announcement = mongoose.model('Announcement', { content: String });
 
-// --- API ADMIN (KHÔI PHỤC KẾT NỐI) ---
+// --- API QUẢN TRỊ (KHÔI PHỤC HOÀN TOÀN) ---
 app.get('/api/words', async (req, res) => res.json((await BannedWord.find()).map(w => w.word)));
 app.post('/api/words', async (req, res) => { if (req.body.word) await new BannedWord({ word: req.body.word }).save(); res.sendStatus(200); });
 app.delete('/api/words/:word', async (req, res) => { await BannedWord.deleteOne({ word: req.params.word }); res.sendStatus(200); });
-
 app.get('/api/acronyms', async (req, res) => res.json(await Acronym.find()));
 app.post('/api/acronyms', async (req, res) => { await new Acronym(req.body).save(); res.sendStatus(200); });
 app.delete('/api/acronyms/:key', async (req, res) => { await Acronym.deleteOne({ key: req.params.key }); res.sendStatus(200); });
-
 app.get('/api/emojis', async (req, res) => res.json(await EmojiMap.find()));
 app.post('/api/emojis', async (req, res) => { await new EmojiMap(req.body).save(); res.sendStatus(200); });
 app.delete('/api/emojis/:id', async (req, res) => { await EmojiMap.findByIdAndDelete(req.params.id); res.sendStatus(200); });
-
 app.get('/api/bot', async (req, res) => res.json(await BotAnswer.find()));
 app.post('/api/bot', async (req, res) => { await new BotAnswer(req.body).save(); res.sendStatus(200); });
 app.delete('/api/bot/:id', async (req, res) => { await BotAnswer.findByIdAndDelete(req.params.id); res.sendStatus(200); });
 
-app.get('/api/announcement', async (req, res) => res.json(await Announcement.findOne() || { content: "" }));
-app.post('/api/announcement', async (req, res) => { await Announcement.deleteMany({}); await new Announcement({ content: req.body.content }).save(); res.sendStatus(200); });
-
-// --- LOGIC XỬ LÝ TEXT ---
+// --- LOGIC XỬ LÝ ĐỌC ---
 async function processText(text) {
     if (!text) return "";
+    const banned = await BannedWord.find();
+    if (banned.some(b => text.toLowerCase().includes(b.word.toLowerCase()))) return null;
     let processed = text;
     const emojis = await EmojiMap.find();
     emojis.forEach(e => { processed = processed.split(e.icon).join(" " + e.text + " "); });
@@ -71,8 +66,20 @@ io.on('connection', (socket) => {
     socket.on('set-username', (username) => {
         if (tiktok) tiktok.disconnect();
         tiktok = new WebcastPushConnection(username);
-        tiktok.connect().then(() => socket.emit('status', `Đã kết nối: ${username}`));
         
+        tiktok.connect().then(state => {
+            socket.emit('status', `Đã kết nối: ${username}`);
+            if(state.roomInfo) socket.emit('room-info', { followerCount: state.roomInfo.stats.followerCount });
+        }).catch(() => socket.emit('status', 'Lỗi kết nối!'));
+
+        // Sửa lỗi Follow: Lắng nghe đồng thời 3 sự kiện để đảm bảo nhảy số
+        const updateFollow = (data) => {
+            if(data && data.followerCount) socket.emit('room-info', { followerCount: data.followerCount });
+        };
+        tiktok.on('roomUser', updateFollow);
+        tiktok.on('roomState', updateFollow);
+        tiktok.on('social', updateFollow);
+
         tiktok.on('chat', async (data) => {
             const bot = await BotAnswer.findOne({ keyword: data.comment.toLowerCase() });
             if (bot) {
@@ -83,7 +90,19 @@ io.on('connection', (socket) => {
             const audio = clean ? await getGoogleAudio(`${data.nickname} nói: ${clean}`) : null;
             socket.emit('audio-data', { type: 'chat', user: data.nickname, comment: data.comment, audio });
         });
-        // ... Logic Gift & Member giữ nguyên
+
+        tiktok.on('gift', async (data) => {
+            if (data.repeatEnd) {
+                const audio = await getGoogleAudio(`Cảm ơn ${data.nickname} đã tặng ${data.giftName}`);
+                socket.emit('audio-data', { type: 'gift', user: "QUÀ", comment: `${data.nickname} tặng ${data.giftName}`, audio });
+            }
+        });
+
+        tiktok.on('member', async (data) => {
+            const audio = await getGoogleAudio(`Bèo ơi, anh ${data.nickname} ghé chơi nè`);
+            socket.emit('audio-data', { type: 'welcome', user: "Hệ thống", comment: `${data.nickname} vào`, audio });
+        });
     });
 });
-server.listen(3000);
+
+server.listen(3000, () => console.log('🚀 Server running on http://localhost:3000'));
