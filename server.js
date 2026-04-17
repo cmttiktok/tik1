@@ -16,7 +16,7 @@ const MONGODB_URI = "mongodb+srv://baoboi97:baoboi97@cluster0.skkajlz.mongodb.ne
 mongoose.connect(MONGODB_URI).then(() => console.log("✅ MongoDB Connected"));
 
 const BannedWord = mongoose.model('BannedWord', { word: String });
-const EmojiMap = mongoose.model('EmojiMap', { icon: String, text: String });
+const BotAnswer = mongoose.model('BotAnswer', { keyword: String, response: String });
 
 async function getGoogleAudio(text) {
     try {
@@ -31,24 +31,45 @@ app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, 'admin.html'))
 
 io.on('connection', (socket) => {
     let tiktok;
+    let pkTimer = null;
+
     socket.on('set-username', (username) => {
         if (tiktok) tiktok.disconnect();
         tiktok = new WebcastPushConnection(username);
         
         tiktok.connect().then(state => {
             socket.emit('status', `Đã kết nối: ${username}`);
-            // Gửi số follow ngay khi vừa kết nối thành công
+            // Đếm follow ngay khi kết nối
             if(state.roomInfo) socket.emit('room-info', { followerCount: state.roomInfo.stats.followerCount });
         }).catch(() => socket.emit('status', 'Lỗi kết nối!'));
 
-        // Cập nhật số follow liên tục mỗi khi có thay đổi trong phòng
+        // Lắng nghe đếm follow liên tục
         tiktok.on('roomUser', (data) => {
-            if(data.followerCount) {
-                socket.emit('room-info', { followerCount: data.followerCount });
-            }
+            if(data.followerCount) socket.emit('room-info', { followerCount: data.followerCount });
+        });
+
+        // Nhắc PK khi có trận đấu
+        tiktok.on('linkMicBattle', () => {
+            if (pkTimer) clearInterval(pkTimer);
+            let timeLeft = 300; 
+            pkTimer = setInterval(async () => {
+                timeLeft--;
+                if (timeLeft === 20) {
+                    const audio = await getGoogleAudio("thả bông 20 giây cuối bèo ơi");
+                    socket.emit('audio-data', { type: 'pk', user: "HỆ THỐNG", comment: "NHẮC PK 20S", audio });
+                }
+                if (timeLeft <= 0) clearInterval(pkTimer);
+            }, 1000);
         });
 
         tiktok.on('chat', async (data) => {
+            // Logic Trợ lý (Auto trả lời)
+            const bot = await BotAnswer.findOne({ keyword: data.comment.toLowerCase() });
+            if (bot) {
+                const audio = await getGoogleAudio(bot.response);
+                socket.emit('audio-data', { type: 'bot', user: "TRỢ LÝ", comment: bot.response, audio });
+            }
+            // Đọc chat bình thường
             const audio = await getGoogleAudio(`${data.nickname} nói: ${data.comment}`);
             socket.emit('audio-data', { type: 'chat', user: data.nickname, comment: data.comment, audio });
         });
@@ -58,6 +79,11 @@ io.on('connection', (socket) => {
                 const audio = await getGoogleAudio(`Cảm ơn ${data.nickname} đã tặng ${data.giftName}`);
                 socket.emit('audio-data', { type: 'gift', user: "QUÀ", comment: `${data.nickname} tặng ${data.giftName}`, audio });
             }
+        });
+
+        tiktok.on('member', async (data) => {
+            const audio = await getGoogleAudio(`Bèo ơi, anh ${data.nickname} ghé chơi nè`);
+            socket.emit('audio-data', { type: 'welcome', user: "Hệ thống", comment: `${data.nickname} vào`, audio });
         });
     });
 });
