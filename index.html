@@ -8,27 +8,39 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/nosleep/0.12.0/NoSleep.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@600;700&display=swap" rel="stylesheet">
     <style>
-        :root { --pink: #fe2c55; --bg: #fff0f3; --panel: #ffffff; --green: #2ecc71; }
-        body { font-family: 'Quicksand', sans-serif; background: var(--bg); margin: 0; padding: 15px; display: flex; gap: 15px; min-height: 100vh; box-sizing: border-box; }
-        .left-col { width: 320px; display: flex; flex-direction: column; gap: 10px; flex-shrink: 0; }
-        .right-col { flex: 1; display: flex; flex-direction: column; background: var(--panel); border-radius: 25px; padding: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.03); }
-        .card { background: var(--panel); padding: 15px; border-radius: 20px; border: 1px solid #f0f0f0; box-shadow: 0 8px 20px rgba(0,0,0,0.02); }
+        :root { --pink: #fe2c55; --bg: #fff0f3; --panel: #ffffff; --green: #2ecc71; --border: #f0f0f0; }
+        body { font-family: 'Quicksand', sans-serif; background: var(--bg); margin: 0; padding: 15px; display: flex; gap: 15px; height: 100vh; box-sizing: border-box; }
         
-        .header-decor { background: white; padding: 15px; border-radius: 20px; border: 1px solid #f0f0f0; text-align: center; }
-        #digital-clock { font-size: 32px; font-weight: 700; color: var(--pink); }
-        .date-row { display: flex; justify-content: space-around; font-size: 11px; margin-top: 5px; border-bottom: 1px dashed #eee; padding-bottom: 8px; }
+        /* CỘT TRÁI - ĐIỀU KHIỂN */
+        .left-col { width: 320px; display: flex; flex-direction: column; gap: 10px; flex-shrink: 0; }
+        .card { background: var(--panel); padding: 18px; border-radius: 20px; border: 1px solid var(--border); box-shadow: 0 8px 20px rgba(0,0,0,0.02); }
+        
+        .header-decor { background: white; padding: 15px; border-radius: 20px; border: 1px solid var(--border); text-align: center; }
+        #digital-clock { font-size: 32px; font-weight: 700; color: var(--pink); line-height: 1; }
+        .date-row { display: flex; justify-content: space-between; font-size: 11px; margin-top: 8px; border-bottom: 1px dashed #eee; padding-bottom: 8px; }
         .marquee-box { background: #333; color: #fbff00; font-size: 11px; padding: 4px 0; margin-top: 8px; border-radius: 8px; font-weight: bold; }
         
         .follow-section { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; background: #fff5f7; padding: 10px; border-radius: 12px; }
         #follow-count { font-size: 24px; font-weight: 700; color: #333; }
 
-        #chat { height: 480px; overflow-y: auto; display: flex; flex-direction: column-reverse; }
+        /* CỘT PHẢI - LỊCH SỬ CHAT */
+        .right-col { flex: 1; display: flex; flex-direction: column; background: var(--panel); border-radius: 25px; border: 1px solid var(--border); padding: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.03); }
+        #chat { flex: 1; overflow-y: auto; display: flex; flex-direction: column-reverse; background: #ffffff; border-radius: 15px; padding: 10px; }
         .hide-system .msg-system { display: none !important; }
-        .msg { padding: 8px; border-bottom: 1px solid #f9f9f9; font-size: 14px; }
-        .sw-item { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; font-size: 12px; font-weight: bold; border-bottom: 1px solid #f9f9f9; }
+        .msg { padding: 10px; border-bottom: 1px solid #f9f9f9; font-size: 14px; }
+        
+        /* NÚT TRƯỢT (SWITCH) */
+        .sw-item { display: flex; justify-content: space-between; align-items: center; padding: 7px 0; border-bottom: 1px solid #f9f9f9; font-size: 13px; font-weight: bold; }
+        .switch { position: relative; width: 38px; height: 20px; display: inline-block; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background: #ddd; border-radius: 20px; transition: .4s; }
+        .slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px; background: white; border-radius: 50%; transition: .4s; }
+        input:checked + .slider { background: var(--pink); }
+        input:checked + .slider:before { transform: translateX(18px); }
+
+        input[type="text"] { width: 100%; padding: 12px; border-radius: 12px; border: 1px solid #ffdae0; outline: none; margin-bottom: 8px; box-sizing: border-box; }
         button.conn-btn { width: 100%; padding: 12px; background: var(--pink); color: white; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; }
-        input[type="text"] { width: 100%; padding: 10px; border-radius: 10px; border: 1px solid #eee; margin-bottom: 5px; box-sizing: border-box; }
-        input[type="range"] { accent-color: var(--pink); width: 100%; }
+        @media (max-width: 768px) { body { flex-direction: column; height: auto; } .left-col { width: 100%; } }
     </style>
 </head>
 <body>
@@ -36,14 +48,14 @@
         <div class="header-decor">
             <div id="digital-clock">00:00:00</div>
             <div class="date-row">
-                <span id="digital-date" style="font-weight: bold;">--/--/----</span>
-                <span id="lunar-date" style="color:#8e44ad; font-weight: bold;">--/-- Âm Lịch</span>
+                <span id="digital-date" style="font-weight: 700;">17/04/2026</span>
+                <span id="lunar-date" style="color:#8e44ad; font-weight: 700;">--/-- Âm Lịch</span>
             </div>
             <div class="marquee-box">
                 <marquee id="marquee-text" behavior="scroll" direction="left">Đang tải thông báo...</marquee>
             </div>
             <div class="follow-section">
-                <span style="font-size: 10px; font-weight: 700;">FOLLOWERS</span>
+                <span style="font-size: 10px; font-weight: 700; color: var(--pink);">FOLLOWERS</span>
                 <span id="follow-count">0</span>
             </div>
         </div>
@@ -51,27 +63,27 @@
         <div class="card">
             <input type="text" id="user" placeholder="Nhập ID TikTok...">
             <button class="conn-btn" onclick="start()">KẾT NỐI LIVE</button>
-            <p id="stt" style="font-size:10px; color:gray; text-align:center; margin-top:5px;">Sẵn sàng</p>
+            <p id="stt" style="font-size:11px; color:gray; text-align:center; margin-top:5px">Sẵn sàng</p>
         </div>
 
         <div class="card">
-            <div class="sw-item" style="color:#2980b9">ẨN CMT HỆ THỐNG <input type="checkbox" onchange="document.getElementById('chat').classList.toggle('hide-system', this.checked)"></div>
-            <div class="sw-item" style="color:var(--pink)">CHỈ NHẮC PK <input type="checkbox" id="pkOnly"></div>
-            <div class="sw-item">Chào khách <input type="checkbox" id="welcomeToggle" checked></div>
-            <div class="sw-item">Đọc quà <input type="checkbox" id="giftToggle" checked></div>
-            <div class="sw-item">Nhắc PK <input type="checkbox" id="pkToggle" checked></div>
-            <div class="sw-item">Trợ lý <input type="checkbox" id="botToggle" checked></div>
-            <div class="sw-item">Tắt tiếng <input type="checkbox" id="muteToggle"></div>
-            <div style="margin-top: 8px;">
-                <span style="font-size: 11px;">TỐC ĐỘ ĐỌC: <b id="speedVal">1.0</b>x</span>
-                <input type="range" id="speechSpeed" min="0.5" max="2" step="0.1" value="1" oninput="document.getElementById('speedVal').innerText=this.value">
+            <div class="sw-item" style="color:#2980b9">ẨN CMT HỆ THỐNG <label class="switch"><input type="checkbox" onchange="document.getElementById('chat').classList.toggle('hide-system', this.checked)"><span class="slider"></span></label></div>
+            <div class="sw-item" style="color:var(--pink)">CHỈ NHẮC PK <label class="switch"><input type="checkbox" id="pkOnly"><span class="slider"></span></label></div>
+            <div class="sw-item">Chào khách <label class="switch"><input type="checkbox" id="welcomeToggle" checked><span class="slider"></span></label></div>
+            <div class="sw-item">Đọc quà <label class="switch"><input type="checkbox" id="giftToggle" checked><span class="slider"></span></label></div>
+            <div class="sw-item">Nhắc PK <label class="switch"><input type="checkbox" id="pkToggle" checked><span class="slider"></span></label></div>
+            <div class="sw-item">Trợ lý <label class="switch"><input type="checkbox" id="botToggle" checked><span class="slider"></span></label></div>
+            <div class="sw-item">Tắt tiếng <label class="switch"><input type="checkbox" id="muteToggle"><span class="slider"></span></label></div>
+            <div style="margin-top: 10px;">
+                <span style="font-size: 12px; font-weight: bold;">TỐC ĐỘ: <b id="speedVal" style="color:var(--pink)">1.0</b>x</span>
+                <input type="range" id="speechSpeed" min="0.5" max="2" step="0.1" value="1" style="width:100%; accent-color:var(--pink)" oninput="document.getElementById('speedVal').innerText=this.value">
             </div>
             <a href="/admin" target="_blank" style="display:block; text-align:center; margin-top:12px; font-size:12px; color:var(--pink); text-decoration:none; font-weight:bold;">⚙️ CÀI ĐẶT HỆ THỐNG</a>
         </div>
     </div>
 
     <div class="right-col">
-        <h3 style="margin:0 0 10px 0; font-size:15px; font-weight: 700;">Lịch sử hoạt động</h3>
+        <h3 style="margin:0 0 10px 0; font-size:16px; font-weight: 700;">Lịch sử hoạt động</h3>
         <div id="chat"></div>
     </div>
 
@@ -85,8 +97,7 @@
             const d = now.getDate(), m = now.getMonth() + 1;
             if (d==30 && m==4) return "🇻🇳 Kỷ niệm ngày Giải phóng miền Nam 30/04";
             if (d==1 && m==5) return "🛠️ Chúc mừng ngày Quốc tế Lao động 01/05";
-            if (d==2 && m==9) return "🇻🇳 Chúc mừng ngày Quốc khánh 02/09";
-            return "💖 Chúc các bạn xem live vui vẻ, hãy nhấn Follow ủng hộ Bèo nhé!";
+            return "💖 Chúc các bạn xem live vui vẻ!";
         }
 
         async function updateAnn() {
