@@ -3,39 +3,35 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BÈO CONTROL PANEL - PREMIUM</title>
+    <title>BÈO CONTROL PANEL - FULL CHỨC NĂNG</title>
     <script src="/socket.io/socket.io.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@600;700&display=swap" rel="stylesheet">
     <style>
         :root { --pink: #fe2c55; --bg: #fff0f3; --panel: #ffffff; --green: #2ecc71; --border: #f0f0f0; }
         body { font-family: 'Quicksand', sans-serif; background: var(--bg); margin: 0; padding: 15px; display: flex; gap: 15px; min-height: 100vh; box-sizing: border-box; }
-        .left-col { width: 320px; display: flex; flex-direction: column; gap: 12px; flex-shrink: 0; }
+        .left-col { width: 320px; display: flex; flex-direction: column; gap: 10px; flex-shrink: 0; }
         .right-col { flex: 1; display: flex; flex-direction: column; background: var(--panel); border-radius: 25px; border: 1px solid var(--border); padding: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.03); }
-        .card { background: var(--panel); padding: 18px; border-radius: 20px; border: 1px solid var(--border); box-shadow: 0 8px 20px rgba(0,0,0,0.02); }
+        .card { background: var(--panel); padding: 15px; border-radius: 20px; border: 1px solid var(--border); box-shadow: 0 8px 20px rgba(0,0,0,0.02); }
         .header-decor { display: flex; justify-content: space-between; align-items: center; background: white; padding: 12px 20px; border-radius: 20px; border: 1px solid var(--border); }
         #digital-clock { font-size: 26px; font-weight: 700; color: var(--pink); line-height: 1; }
-        .date-box { font-size: 11px; color: #666; margin-top: 4px; line-height: 1.4; text-align: left; }
+        .date-box { font-size: 11px; color: #666; margin-top: 4px; }
         .lunar-date { color: #8e44ad; font-weight: bold; }
         .follow-section { text-align: right; background: #fff5f7; padding: 8px 15px; border-radius: 15px; border: 1px solid #ffdae0; }
-        .follow-label { font-size: 10px; color: var(--pink); font-weight: 700; text-transform: uppercase; }
         #follow-count { font-size: 22px; font-weight: 700; color: #333; display: block; }
-        #chat { height: 480px; overflow-y: auto; display: flex; flex-direction: column-reverse; background: #ffffff; border-radius: 15px; padding: 10px; border: 1px solid #eeeeee; }
-        .msg { padding: 10px; border-bottom: 1px solid #f9f9f9; font-size: 14px; }
+        #chat { height: 450px; overflow-y: auto; display: flex; flex-direction: column-reverse; background: #ffffff; border-radius: 15px; padding: 10px; border: 1px solid #eeeeee; }
+        .msg { padding: 8px; border-bottom: 1px solid #f9f9f9; font-size: 14px; }
         .user-name { color: var(--pink); font-weight: bold; }
         .system-name { color: var(--green); font-weight: bold; }
-        input[type="text"] { width: 100%; padding: 12px; border-radius: 12px; border: 1px solid #ffdae0; outline: none; margin-bottom: 10px; box-sizing: border-box; }
-        button.conn-btn { width: 100%; padding: 12px; background: var(--pink); color: white; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; }
-        .sw-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #f9f9f9; font-size: 13px; font-weight: bold; }
+        input[type="text"] { width: 100%; padding: 10px; border-radius: 10px; border: 1px solid #ffdae0; margin-bottom: 8px; box-sizing: border-box; }
+        button.conn-btn { width: 100%; padding: 10px; background: var(--pink); color: white; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; }
+        .sw-item { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid #f9f9f9; font-size: 13px; font-weight: bold; }
         .switch { position: relative; width: 38px; height: 20px; }
         .switch input { opacity: 0; width: 0; height: 0; }
         .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background: #ddd; border-radius: 20px; transition: .4s; }
         .slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px; background: white; border-radius: 50%; transition: .4s; }
         input:checked + .slider { background: var(--pink); }
         input:checked + .slider:before { transform: translateX(18px); }
-        @media (max-width: 768px) {
-            body { flex-direction: column; height: auto; overflow-y: auto; }
-            .left-col { width: 100%; }
-        }
+        @media (max-width: 768px) { body { flex-direction: column; overflow-y: auto; height: auto; } .left-col { width: 100%; } }
     </style>
 </head>
 <body>
@@ -49,30 +45,36 @@
                 </div>
             </div>
             <div class="follow-section">
-                <span class="follow-label">Followers</span>
+                <span style="font-size: 10px; color: var(--pink); font-weight: 700;">FOLLOWERS</span>
                 <span id="follow-count">0</span>
             </div>
         </div>
+
         <div class="card">
             <input type="text" id="user" placeholder="Nhập ID TikTok...">
             <button class="conn-btn" onclick="start()">KẾT NỐI LIVE</button>
-            <p id="stt" style="font-size:11px; color:gray; margin-top:8px; text-align:center">Sẵn sàng</p>
+            <p id="stt" style="font-size:11px; color:gray; margin-top:5px; text-align:center">Sẵn sàng</p>
         </div>
+
         <div class="card">
-            <div class="sw-item">🔇 TẮT TIẾNG <label class="switch"><input type="checkbox" id="muteToggle"><span class="slider"></span></label></div>
-            <div class="sw-item">Chào mừng <label class="switch"><input type="checkbox" id="welcomeToggle" checked><span class="slider"></span></label></div>
-            <div class="sw-item">Tặng quà <label class="switch"><input type="checkbox" id="giftToggle" checked><span class="slider"></span></label></div>
+            <div class="sw-item" style="color:var(--pink)">CHỈ NHẮC PK <label class="switch"><input type="checkbox" id="pkOnly"><span class="slider"></span></label></div>
+            <hr style="border: 0; border-top: 1px solid #eee; margin: 5px 0;">
+            <div class="sw-item">Chào khách <label class="switch"><input type="checkbox" id="welcomeToggle" checked><span class="slider"></span></label></div>
+            <div class="sw-item">Đọc quà <label class="switch"><input type="checkbox" id="giftToggle" checked><span class="slider"></span></label></div>
+            <div class="sw-item">Nhắc PK <label class="switch"><input type="checkbox" id="pkToggle" checked><span class="slider"></span></label></div>
+            <div class="sw-item">Trợ lý <label class="switch"><input type="checkbox" id="botToggle" checked><span class="slider"></span></label></div>
+            <div class="sw-item">Tắt tiếng <label class="switch"><input type="checkbox" id="muteToggle"><span class="slider"></span></label></div>
             
             <div style="margin-top: 10px; font-size: 12px; font-weight: bold;">
                 TỐC ĐỘ ĐỌC: <span id="speedVal" style="color:var(--pink)">1.0</span>x
                 <input type="range" id="speechSpeed" min="0.5" max="2" step="0.1" value="1" style="width:100%; accent-color:var(--pink)" oninput="document.getElementById('speedVal').innerText=this.value">
             </div>
-            
-            <a href="/admin" style="display:block; text-align:center; margin-top:15px; font-size:12px; color:var(--pink); text-decoration:none; font-weight:bold;">⚙️ CÀI ĐẶT HỆ THỐNG</a>
+            <a href="/admin" style="display:block; text-align:center; margin-top:10px; font-size:12px; color:var(--pink); text-decoration:none; font-weight:bold;">⚙️ CÀI ĐẶT HỆ THỐNG</a>
         </div>
     </div>
+
     <div class="right-col">
-        <h3 style="margin:0 0 15px 0; font-size:16px; font-weight: 700;">Lịch sử hoạt động</h3>
+        <h3 style="margin:0 0 10px 0; font-size:16px;">Lịch sử hoạt động</h3>
         <div id="chat"></div>
     </div>
 
@@ -80,20 +82,17 @@
         const socket = io();
         let queue = [], playing = false;
 
-        // Thuật toán lịch âm chuẩn tháng 4/2026
+        // Lịch âm chuẩn tháng 4/2026
         function getLunar(d, m, y) {
-            // Ngày 17/04/2026 dương lịch tương ứng 01/03 âm lịch năm Bính Ngọ
-            // Đây là logic nội bộ tính toán cho thời điểm hiện tại của bạn
             const dayMap = { 17: "01", 18: "02", 19: "03", 20: "04" };
-            const ld = dayMap[d] || d;
-            return `Âm lịch: ${ld}/03 (Bính Ngọ)`;
+            return `Âm lịch: ${dayMap[d] || d}/03 (Bính Ngọ)`;
         }
 
         function updateClock() {
             const now = new Date();
             document.getElementById('digital-clock').innerText = now.toLocaleTimeString('vi-VN', { hour12: false });
             document.getElementById('digital-date').innerText = now.toLocaleDateString('vi-VN');
-            document.getElementById('lunar-date').innerText = getLunar(now.getDate(), now.getMonth()+1, now.getFullYear());
+            document.getElementById('lunar-date').innerText = getLunar(now.getDate());
         }
         setInterval(updateClock, 1000); updateClock();
 
@@ -106,9 +105,7 @@
         }
 
         socket.on('room-info', data => {
-            if(data.followerCount !== undefined) {
-                document.getElementById('follow-count').innerText = data.followerCount.toLocaleString();
-            }
+            if(data.followerCount !== undefined) document.getElementById('follow-count').innerText = data.followerCount.toLocaleString();
         });
 
         socket.on('status', m => document.getElementById('stt').innerText = m);
@@ -116,14 +113,21 @@
         socket.on('audio-data', d => {
             const chat = document.getElementById('chat');
             const div = document.createElement('div'); div.className = 'msg';
-            const isSys = ['welcome','gift','pk','bot'].includes(d.type) || ["Hệ thống","QUÀ"].includes(d.user);
+            const isSys = ['welcome','gift','pk','bot'].includes(d.type) || ["Hệ thống","QUÀ","TRỢ LÝ"].includes(d.user);
             div.innerHTML = `<b class="${isSys?'system-name':'user-name'}">${d.user}:</b> ${d.comment}`;
             chat.prepend(div);
 
             if (d.audio && !document.getElementById('muteToggle').checked) {
-                if (d.type === 'welcome' && !document.getElementById('welcomeToggle').checked) return;
-                if (d.type === 'gift' && !document.getElementById('giftToggle').checked) return;
-                queue.push(d.audio);
+                const pkOnly = document.getElementById('pkOnly').checked;
+                if (pkOnly) {
+                    if (d.type === 'pk' && document.getElementById('pkToggle').checked) queue.push(d.audio);
+                } else {
+                    if (d.type === 'welcome' && !document.getElementById('welcomeToggle').checked) return;
+                    if (d.type === 'gift' && !document.getElementById('giftToggle').checked) return;
+                    if (d.type === 'pk' && !document.getElementById('pkToggle').checked) return;
+                    if (d.type === 'bot' && !document.getElementById('botToggle').checked) return;
+                    queue.push(d.audio);
+                }
                 if (!playing) play();
             }
         });
@@ -132,8 +136,7 @@
             if (document.getElementById('muteToggle').checked || !queue.length) { playing = false; return; }
             playing = true;
             const a = new Audio(queue.shift());
-            // Áp dụng tốc độ đọc từ thanh trượt
-            a.playbackRate = parseFloat(document.getElementById('speechSpeed').value) || 1;
+            a.playbackRate = parseFloat(document.getElementById('speechSpeed').value);
             a.onended = () => setTimeout(play, 300);
             a.play().catch(() => play());
         }
