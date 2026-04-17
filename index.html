@@ -2,28 +2,29 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>BÈO CONTROL PANEL</title>
     <script src="/socket.io/socket.io.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@600;700&display=swap" rel="stylesheet">
     <style>
         :root { --pink: #fe2c55; --bg: #fff0f3; --panel: #ffffff; }
-        body { font-family: 'Quicksand', sans-serif; background: var(--bg); margin: 0; padding: 15px; display: flex; gap: 15px; height: 100vh; box-sizing: border-box; transition: all 0.3s; }
+        body { font-family: 'Quicksand', sans-serif; background: var(--bg); margin: 0; padding: 15px; display: flex; gap: 15px; height: 100vh; box-sizing: border-box; }
         
-        /* CỘT TRÁI: NÚT BẤM */
+        /* LAYOUT PC */
         .left-col { width: 300px; display: flex; flex-direction: column; gap: 15px; flex-shrink: 0; }
-        .card { background: var(--panel); padding: 20px; border-radius: 20px; border: 2px solid #fff; box-shadow: 0 8px 20px rgba(254, 44, 85, 0.05); }
+        .right-col { flex: 1; display: flex; flex-direction: column; background: var(--panel); border-radius: 25px; border: 2px solid #fff; overflow: hidden; padding: 20px; box-shadow: 0 8px 20px rgba(254,44,85,0.05); }
+        .card { background: var(--panel); padding: 20px; border-radius: 20px; border: 2px solid #fff; box-shadow: 0 8px 20px rgba(254,44,85,0.05); }
         
-        /* CỘT PHẢI: CHAT */
-        .right-col { flex: 1; display: flex; flex-direction: column; background: var(--panel); border-radius: 25px; border: 2px solid #fff; overflow: hidden; padding: 20px; box-shadow: 0 8px 20px rgba(254, 44, 85, 0.05); }
+        /* CHAT */
         #chat { flex: 1; overflow-y: auto; display: flex; flex-direction: column-reverse; }
-        .msg { padding: 12px; border-bottom: 1px solid #fff5f7; font-size: 16px; animation: slide 0.3s ease; }
-        @keyframes slide { from { opacity: 0; transform: translateX(10px); } to { opacity: 1; transform: translateX(0); } }
+        .msg { padding: 10px; border-bottom: 1px solid #fff5f7; font-size: 15px; }
 
-        /* UI ELEMENTS */
+        /* INPUTS */
         input[type="text"] { width: 100%; padding: 12px; border-radius: 12px; border: 1px solid #ffdae0; outline: none; margin-bottom: 10px; box-sizing: border-box; font-size: 16px; }
-        button.conn-btn { width: 100%; padding: 12px; background: var(--pink); color: white; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; }
+        button.conn-btn { width: 100%; padding: 12px; background: var(--pink); color: white; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        button.conn-btn:active { transform: scale(0.98); opacity: 0.9; }
         
+        /* SWITCHES */
         .sw-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #f9f9f9; font-size: 14px; font-weight: bold; color: #4a1c2c; }
         .switch { position: relative; width: 38px; height: 20px; }
         .switch input { opacity: 0; width: 0; height: 0; }
@@ -32,24 +33,21 @@
         input:checked + .slider { background: var(--pink); }
         input:checked + .slider:before { transform: translateX(18px); }
 
-        .speed-box { margin-top: 10px; font-size: 12px; }
-        input[type="range"] { width: 100%; accent-color: var(--pink); margin-top: 5px; }
+        input[type="range"] { width: 100%; accent-color: var(--pink); }
         .admin-link { display: block; text-align: center; margin-top: 15px; color: var(--pink); text-decoration: none; font-size: 13px; font-weight: bold; }
 
-        /* --- TỐI ƯU MOBILE (DƯỚI 768PX) --- */
+        /* TỐI ƯU MOBILE */
         @media (max-width: 768px) {
-            body { flex-direction: column; height: auto; padding: 10px; overflow-x: hidden; }
+            body { flex-direction: column; height: auto; padding: 10px; }
             .left-col { width: 100%; order: 1; }
-            .right-col { width: 100%; height: 450px; order: 2; margin-top: 5px; padding: 15px; }
-            .card { padding: 15px; }
-            .msg { font-size: 14px; padding: 10px 5px; }
+            .right-col { width: 100%; height: 400px; order: 2; margin-top: 5px; }
         }
     </style>
 </head>
 <body>
     <div class="left-col">
         <div class="card">
-            <input type="text" id="targetId" placeholder="Nhập ID TikTok...">
+            <input type="text" id="targetId" placeholder="Nhập ID TikTok..." autocomplete="off">
             <button class="conn-btn" onclick="connect()">KẾT NỐI LIVE</button>
             <p id="stt" style="font-size:12px; color:gray; margin-top:10px; text-align:center">Chưa kết nối</p>
         </div>
@@ -61,7 +59,7 @@
             <div class="sw-item">Auto trả lời <label class="switch"><input type="checkbox" id="botToggle" checked><span class="slider"></span></label></div>
             <div class="sw-item" style="color:var(--pink)">CHỈ ĐỌC PK <label class="switch"><input type="checkbox" id="pkOnly"><span class="slider"></span></label></div>
             
-            <div class="speed-box">
+            <div style="margin-top:10px; font-size:12px">
                 Tốc độ đọc: <span id="val">1</span>x
                 <input type="range" id="speechSpeed" min="0.5" max="2" step="0.1" value="1" oninput="document.getElementById('val').innerText=this.value">
             </div>
@@ -70,7 +68,7 @@
     </div>
 
     <div class="right-col">
-        <h3 style="margin:0 0 15px 0; color:#333; font-size:18px">Lịch sử hoạt động</h3>
+        <h3 style="margin:0 0 10px 0; font-size:16px">Lịch sử hoạt động</h3>
         <div id="chat"></div>
     </div>
 
@@ -79,17 +77,27 @@
         let queue = [];
         let playing = false;
 
+        // Hàm kết nối - Đảm bảo lấy đúng ID từ input
         function connect() {
-            const id = document.getElementById('targetId').value;
-            if(!id) return alert("Nhập ID TikTok!");
+            const idInput = document.getElementById('targetId');
+            const id = idInput.value.trim();
+            if(!id) {
+                alert("Bạn chưa nhập ID TikTok!");
+                return;
+            }
+            console.log("Đang kết nối tới ID:", id);
             socket.emit('set-target', id);
+            document.getElementById('stt').innerText = "Đang thử kết nối...";
         }
 
-        socket.on('status', m => document.getElementById('stt').innerText = m);
+        socket.on('status', m => {
+            document.getElementById('stt').innerText = m;
+        });
 
         socket.on('audio-data', d => {
             const chat = document.getElementById('chat');
-            const div = document.createElement('div'); div.className = 'msg';
+            const div = document.createElement('div');
+            div.className = 'msg';
             div.innerHTML = `<b style="color:var(--pink)">${d.user}:</b> ${d.comment}`;
             chat.prepend(div);
 
@@ -114,8 +122,16 @@
             const a = new Audio(queue.shift());
             a.playbackRate = parseFloat(document.getElementById('speechSpeed').value);
             a.onended = () => setTimeout(play, 300);
-            a.play().catch(() => play());
+            a.play().catch(e => {
+                console.log("Audio play blocked hoặc lỗi:", e);
+                play(); // Bỏ qua file lỗi, chơi tiếp file sau
+            });
         }
+
+        // Hỗ trợ nhấn Enter để kết nối
+        document.getElementById('targetId').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') connect();
+        });
     </script>
 </body>
 </html>
