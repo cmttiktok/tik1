@@ -2,12 +2,13 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BÈO CONTROL PANEL</title>
     <script src="/socket.io/socket.io.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@600;700&display=swap" rel="stylesheet">
     <style>
         :root { --pink: #fe2c55; --bg: #fff0f3; --panel: #ffffff; }
-        body { font-family: 'Quicksand', sans-serif; background: var(--bg); margin: 0; padding: 15px; display: flex; gap: 15px; height: 100vh; box-sizing: border-box; }
+        body { font-family: 'Quicksand', sans-serif; background: var(--bg); margin: 0; padding: 15px; display: flex; gap: 15px; height: 100vh; box-sizing: border-box; transition: all 0.3s; }
         
         /* CỘT TRÁI: NÚT BẤM */
         .left-col { width: 300px; display: flex; flex-direction: column; gap: 15px; flex-shrink: 0; }
@@ -20,7 +21,7 @@
         @keyframes slide { from { opacity: 0; transform: translateX(10px); } to { opacity: 1; transform: translateX(0); } }
 
         /* UI ELEMENTS */
-        input[type="text"] { width: 100%; padding: 12px; border-radius: 12px; border: 1px solid #ffdae0; outline: none; margin-bottom: 10px; box-sizing: border-box; }
+        input[type="text"] { width: 100%; padding: 12px; border-radius: 12px; border: 1px solid #ffdae0; outline: none; margin-bottom: 10px; box-sizing: border-box; font-size: 16px; }
         button.conn-btn { width: 100%; padding: 12px; background: var(--pink); color: white; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; }
         
         .sw-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #f9f9f9; font-size: 14px; font-weight: bold; color: #4a1c2c; }
@@ -34,46 +35,54 @@
         .speed-box { margin-top: 10px; font-size: 12px; }
         input[type="range"] { width: 100%; accent-color: var(--pink); margin-top: 5px; }
         .admin-link { display: block; text-align: center; margin-top: 15px; color: var(--pink); text-decoration: none; font-size: 13px; font-weight: bold; }
+
+        /* --- TỐI ƯU MOBILE (DƯỚI 768PX) --- */
+        @media (max-width: 768px) {
+            body { flex-direction: column; height: auto; padding: 10px; overflow-x: hidden; }
+            .left-col { width: 100%; order: 1; }
+            .right-col { width: 100%; height: 450px; order: 2; margin-top: 5px; padding: 15px; }
+            .card { padding: 15px; }
+            .msg { font-size: 14px; padding: 10px 5px; }
+        }
     </style>
 </head>
 <body>
     <div class="left-col">
         <div class="card">
-            <h3 style="margin: 0 0 15px 0; color: var(--pink); text-align: center;">KẾT NỐI LIVE</h3>
-            <input type="text" id="user" placeholder="Nhập ID TikTok...">
-            <button class="conn-btn" onclick="start()">KẾT NỐI NGAY</button>
-            <div id="stt" style="font-size: 11px; text-align: center; margin-top: 8px; color: #888;">Chưa kết nối</div>
+            <input type="text" id="targetId" placeholder="Nhập ID TikTok...">
+            <button class="conn-btn" onclick="connect()">KẾT NỐI LIVE</button>
+            <p id="stt" style="font-size:12px; color:gray; margin-top:10px; text-align:center">Chưa kết nối</p>
         </div>
 
         <div class="card">
-            <h3 style="margin: 0 0 10px 0; font-size: 15px;">ĐIỀU KHIỂN</h3>
-            <div class="sw-item" style="color: blue;"><span>CHỈ NHẮC PK:</span><label class="switch"><input type="checkbox" id="pkOnly"><span class="slider"></span></label></div>
-            <div class="sw-item"><span>Chào khách:</span><label class="switch"><input type="checkbox" id="welcomeToggle" checked><span class="slider"></span></label></div>
-            <div class="sw-item"><span>Đọc Quà:</span><label class="switch"><input type="checkbox" id="giftToggle" checked><span class="slider"></span></label></div>
-            <div class="sw-item"><span>Nhắc PK:</span><label class="switch"><input type="checkbox" id="pkToggle" checked><span class="slider"></span></label></div>
-            <div class="sw-item"><span>Trợ lý:</span><label class="switch"><input type="checkbox" id="botToggle" checked><span class="slider"></span></label></div>
+            <div class="sw-item">Chào mừng <label class="switch"><input type="checkbox" id="welcomeToggle" checked><span class="slider"></span></label></div>
+            <div class="sw-item">Tặng quà <label class="switch"><input type="checkbox" id="giftToggle" checked><span class="slider"></span></label></div>
+            <div class="sw-item">Kêu gọi PK <label class="switch"><input type="checkbox" id="pkToggle" checked><span class="slider"></span></label></div>
+            <div class="sw-item">Auto trả lời <label class="switch"><input type="checkbox" id="botToggle" checked><span class="slider"></span></label></div>
+            <div class="sw-item" style="color:var(--pink)">CHỈ ĐỌC PK <label class="switch"><input type="checkbox" id="pkOnly"><span class="slider"></span></label></div>
             
             <div class="speed-box">
-                <b>TỐC ĐỘ ĐỌC: <span id="speedVal">1.0</span>x</b>
-                <input type="range" id="speechSpeed" min="0.5" max="2" step="0.1" value="1" oninput="document.getElementById('speedVal').innerText=this.value">
+                Tốc độ đọc: <span id="val">1</span>x
+                <input type="range" id="speechSpeed" min="0.5" max="2" step="0.1" value="1" oninput="document.getElementById('val').innerText=this.value">
             </div>
+            <a href="/admin" class="admin-link">CÀI ĐẶT HỆ THỐNG ⚙️</a>
         </div>
-
-        <a href="/admin" target="_blank" class="admin-link">⚙️ CÀI ĐẶT TỪ CẤM / ICON</a>
     </div>
 
     <div class="right-col">
-        <h3 style="margin: 0 0 15px 0; color: var(--pink); border-bottom: 2px solid #fff5f7; padding-bottom: 10px;">BÌNH LUẬN TRỰC TIẾP</h3>
+        <h3 style="margin:0 0 15px 0; color:#333; font-size:18px">Lịch sử hoạt động</h3>
         <div id="chat"></div>
     </div>
 
     <script>
         const socket = io();
-        let queue = [], playing = false;
+        let queue = [];
+        let playing = false;
 
-        function start() {
-            const u = document.getElementById('user').value;
-            if(u) socket.emit('set-username', u);
+        function connect() {
+            const id = document.getElementById('targetId').value;
+            if(!id) return alert("Nhập ID TikTok!");
+            socket.emit('set-target', id);
         }
 
         socket.on('status', m => document.getElementById('stt').innerText = m);
